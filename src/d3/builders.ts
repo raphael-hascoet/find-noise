@@ -70,6 +70,56 @@ export const useBuilders = () => {
   const albumPool = useAtomValue(albumsPoolAtom);
 
   return {
+    artist:
+      ({
+        artistMbid,
+        artistName,
+        x,
+        y,
+        radius = 18,
+      }: {
+        artistMbid: string;
+        artistName: string;
+        radius?: number;
+      } & D3Position) =>
+      (renderer: D3SvgRenderer) => {
+        const id = `artist-${artistMbid}`;
+
+        // Create group for positioning
+        const group = renderer.svg
+          .append("g")
+          .attr("id", id)
+          .attr("transform", `translate(${x},${y})`)
+          .style("cursor", "pointer");
+
+        // Artist circle
+        const circle = group
+          .append("circle")
+          .attr("r", radius)
+          .attr("fill", "#ffcc00")
+          .attr("stroke", "rgba(0,0,0,0.6)")
+          .attr("stroke-width", 1.2);
+
+        // Artist label
+        group
+          .append("text")
+          .text(artistName)
+          .attr("fill", "#eee")
+          .attr("font-size", 13)
+          .attr("font-family", "sans-serif")
+          .attr("text-anchor", "middle")
+          .attr("dy", 4)
+          .style("pointer-events", "none");
+
+        // Hover effects
+        group.on("mouseenter", () => {
+          circle.attr("stroke", "#fff").attr("stroke-width", 2);
+        });
+
+        group.on("mouseleave", () => {
+          circle.attr("stroke", "rgba(0,0,0,0.6)").attr("stroke-width", 1.2);
+        });
+      },
     album:
       ({
         albumId,
@@ -125,6 +175,10 @@ export const useBuilders = () => {
 
         const releaseTextY = wrapperPadding + coverImageSize + 25;
 
+        // Calculate font sizes relative to width
+        const releaseFontSize = width * 0.08; // 8% of width
+        const artistFontSize = width * 0.08; // 8% of width
+
         console.log(album);
         const release = group
           .append("text")
@@ -132,7 +186,7 @@ export const useBuilders = () => {
           .attr("x", width / 2)
           .attr("y", releaseTextY)
           .attr("fill", "#eee")
-          .attr("font-size", 12)
+          .attr("font-size", releaseFontSize)
           .attr("font-family", "sans-serif")
           .attr("text-anchor", "middle")
           .attr("pointer-events", "none");
@@ -148,7 +202,7 @@ export const useBuilders = () => {
           .attr("x", width / 2)
           .attr("y", nextY)
           .attr("fill", "#ccc")
-          .attr("font-size", 12)
+          .attr("font-size", artistFontSize)
           .attr("font-family", "sans-serif")
           .attr("text-anchor", "middle")
           .attr("pointer-events", "none")

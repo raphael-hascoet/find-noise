@@ -22,9 +22,11 @@ export type Album = z.infer<typeof AlbumSchema>;
 
 export class AlbumsPool {
   private albumsMap: Map<string, Album>;
+  private referenceMaps: ReferenceMaps | null;
 
   constructor() {
     this.albumsMap = new Map<string, Album>();
+    this.referenceMaps = null;
   }
 
   async initFromFile(url: string) {
@@ -39,6 +41,9 @@ export class AlbumsPool {
         console.error("Failed to parse album:", parsed.error);
       }
     });
+    this.referenceMaps = buildReferenceMapsFromAlbums(
+      Array.from(this.albumsMap.values())
+    );
     console.log(`Loaded ${this.albumsMap.size} albums.`);
   }
 
@@ -51,7 +56,69 @@ export class AlbumsPool {
     const shuffled = albumsArray.sort(() => 0.5 - Math.random());
     return shuffled.slice(0, count);
   }
+
+  getAlbumsByArtistMbid(artistMbid: string): Album[] {
+    if (!this.referenceMaps) return [];
+    const mbids = this.referenceMaps.artists.get(artistMbid) || [];
+    return mbids
+      .map((mbid) => this.albumsMap.get(mbid))
+      .filter((album): album is Album => album !== undefined);
+  }
+
+  getAlbumsByGenre(genre: string): Album[] {
+    if (!this.referenceMaps) return [];
+    const mbids = this.referenceMaps.genres.get(genre) || [];
+    return mbids
+      .map((mbid) => this.albumsMap.get(mbid))
+      .filter((album): album is Album => album !== undefined);
+  }
+
+  getAlbumsByDescriptor(descriptor: string): Album[] {
+    if (!this.referenceMaps) return [];
+    const mbids = this.referenceMaps.descriptors.get(descriptor) || [];
+    return mbids
+      .map((mbid) => this.albumsMap.get(mbid))
+      .filter((album): album is Album => album !== undefined);
+  }
 }
+
+type ReferenceMaps = {
+  artists: Map<string, string[]>;
+  genres: Map<string, string[]>;
+  descriptors: Map<string, string[]>;
+};
+
+const buildReferenceMapsFromAlbums = (albums: Album[]): ReferenceMaps => {
+  const artists = new Map<string, string[]>();
+  const genres = new Map<string, string[]>();
+  const descriptors = new Map<string, string[]>();
+
+  albums.forEach((album) => {
+    if (!artists.has(album["artist-mbid"])) {
+      artists.set(album["artist-mbid"], [album.mbid]);
+    } else {
+      artists.get(album["artist-mbid"])?.push(album.mbid);
+    }
+
+    album["primary-genres"].forEach((genre) => {
+      if (!genres.has(genre)) {
+        genres.set(genre, [album.mbid]);
+      } else {
+        genres.get(genre)?.push(album.mbid);
+      }
+    });
+
+    album.descriptors.forEach((descriptor) => {
+      if (!descriptors.has(descriptor)) {
+        descriptors.set(descriptor, [album.mbid]);
+      } else {
+        descriptors.get(descriptor)?.push(album.mbid);
+      }
+    });
+  });
+
+  return { artists, genres, descriptors };
+};
 
 const albumsPoolValueAtom = atom<AlbumsPool | null>(null);
 

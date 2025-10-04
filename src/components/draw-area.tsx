@@ -1,6 +1,7 @@
 import { useAtomValue } from "jotai";
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { useBuilders } from "../d3/builders";
+import { renderArtistWithAlbumsForce } from "../d3/force-graph";
 import { D3SvgRenderer } from "../d3/renderer";
 import { albumsPoolAtom } from "../data/albums-pool";
 
@@ -8,14 +9,24 @@ function DrawArea() {
   const svgRef = useRef<SVGSVGElement>(null);
   const rendererRef = useRef<D3SvgRenderer | null>(null);
 
-  const albums = useAtomValue(albumsPoolAtom).getRandomAlbums(5);
-
+  const albumsPool = useAtomValue(albumsPoolAtom);
   const builders = useBuilders();
 
-  console.log(albums);
+  // Get a random artist and their albums
+  const { artistMbid, albums } = useMemo(() => {
+    const randomAlbums = albumsPool.getRandomAlbums(1);
+    if (!randomAlbums.length) return { artistMbid: "", albums: [] };
+
+    const artistMbid = randomAlbums[0]["artist-mbid"];
+    const artistAlbums = albumsPool.getAlbumsByArtistMbid(artistMbid);
+
+    return { artistMbid, albums: artistAlbums };
+  }, [albumsPool]);
+
+  console.log({ artistMbid, albums });
 
   useEffect(() => {
-    if (!svgRef.current) return;
+    if (!svgRef.current || !albums.length) return;
 
     if (!rendererRef.current) {
       rendererRef.current = new D3SvgRenderer(
@@ -29,37 +40,21 @@ function DrawArea() {
 
     console.log(renderer.svg);
 
-    // Add first album
-    renderer.add(
-      builders.album({
-        albumId: albums[0].mbid,
-        x: 100,
-        y: 100,
-        width: 150,
-      })
+    // Render force-directed graph with album builder
+    const cleanup = renderArtistWithAlbumsForce(
+      renderer,
+      artistMbid,
+      albums,
+      builders.album,
+      {
+        width: 800,
+        height: 600,
+        albumCardWidth: 100,
+      }
     );
 
-    // Add second album
-    renderer.add(
-      builders.album({
-        albumId: albums[1].mbid,
-        x: 400,
-        y: 100,
-        width: 150,
-      })
-    );
-
-    // Add connecting line with arrow
-    //   svg
-    //     .append("svg:line")
-    //     .attr("x1", 200)
-    //     .attr("y1", 150)
-    //     .attr("x2", 300 - 15)
-    //     .attr("y2", 150)
-    //     .attr("stroke", "white")
-    //     .attr("stroke-width", 2)
-    //     .attr("marker-end", `url(#${defs.markers.triangle.id})`);
-  }, []);
+    return cleanup;
+  }, [artistMbid, albums, builders]);
 
   return (
     <div
