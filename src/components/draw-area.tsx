@@ -40,16 +40,18 @@ function DrawArea() {
 
     console.log(renderer.svg);
 
-    // Render force-directed graph with album builder
+    // Render force-directed graph with album and artist builders
     const cleanup = renderArtistWithAlbumsForce(
       renderer,
       artistMbid,
       albums,
       builders.album,
+      builders.artist,
       {
         width: 800,
         height: 600,
         albumCardWidth: 100,
+        artistCardWidth: 120,
       }
     );
 

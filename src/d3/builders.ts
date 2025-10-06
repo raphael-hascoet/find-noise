@@ -76,48 +76,122 @@ export const useBuilders = () => {
         artistName,
         x,
         y,
-        radius = 18,
+        width = 120,
       }: {
         artistMbid: string;
         artistName: string;
-        radius?: number;
+        width?: number;
       } & D3Position) =>
       (renderer: D3SvgRenderer) => {
         const id = `artist-${artistMbid}`;
 
-        // Create group for positioning
-        const group = renderer.svg
+        const wrapperPadding = 15;
+
+        // Create outer group for positioning
+        const positionGroup = renderer.svg
           .append("g")
-          .attr("id", id)
-          .attr("transform", `translate(${x},${y})`)
-          .style("cursor", "pointer");
+          .attr("id", `position-${id}`)
+          .attr("transform", `translate(${x},${y})`);
 
-        // Artist circle
-        const circle = group
-          .append("circle")
-          .attr("r", radius)
-          .attr("fill", "#ffcc00")
-          .attr("stroke", "rgba(0,0,0,0.6)")
-          .attr("stroke-width", 1.2);
+        // Create inner group for animations and filter
+        const group = positionGroup
+          .append("g")
+          .attr("id", `group-${id}`)
+          .attr("class", "artist-card")
+          .attr("filter", "url(#floatShadow)")
+          .style("cursor", "pointer")
+          .style("outline", "none");
 
-        // Artist label
-        group
+        // Background rect
+        const bg = group
+          .append("rect")
+          .attr("x", 0)
+          .attr("y", 0)
+          .attr("width", width)
+          .attr("height", 10) // Temporary, will adjust
+          .attr("fill", "#111")
+          .attr("rx", 8)
+          .attr("ry", 8);
+
+        const artistFontSize = width * 0.12;
+
+        // Artist name text
+        const artistText = group
           .append("text")
           .text(artistName)
+          .attr("x", width / 2)
+          .attr("y", wrapperPadding + 10)
           .attr("fill", "#eee")
-          .attr("font-size", 13)
+          .attr("font-size", artistFontSize)
           .attr("font-family", "sans-serif")
           .attr("text-anchor", "middle")
-          .attr("dy", 4)
-          .style("pointer-events", "none");
+          .attr("pointer-events", "none");
 
-        // Hover effects
+        artistText.call(wrapText, width - wrapperPadding * 2, 1.2);
+
+        // Calculate final height
+        const contentBBox = group.node()!.getBBox();
+        const finalHeight = Math.max(
+          contentBBox.y + contentBBox.height + wrapperPadding,
+          40
+        );
+        bg.attr("height", finalHeight);
+
+        // Attach floating animations
+        attachFloatingAnimations(renderer, group);
+
+        // Mouse interactions
+        let isPressed = false;
+
         group.on("mouseenter", () => {
-          circle.attr("stroke", "#fff").attr("stroke-width", 2);
+          bg.transition()
+            .duration(200)
+            .ease(d3.easeCubicOut)
+            .attr("fill", "#131313");
         });
 
         group.on("mouseleave", () => {
-          circle.attr("stroke", "rgba(0,0,0,0.6)").attr("stroke-width", 1.2);
+          bg.transition()
+            .duration(200)
+            .ease(d3.easeCubicOut)
+            .attr("fill", "#111");
+          if (isPressed) {
+            setPressed(renderer, group, false);
+            isPressed = false;
+          }
+        });
+
+        group.on("mousedown", () => {
+          setPressed(renderer, group, true);
+          isPressed = true;
+        });
+
+        group.on("mouseup", () => {
+          setPressed(renderer, group, false);
+          isPressed = false;
+        });
+
+        // Keyboard accessibility
+        group.attr("tabindex", 0);
+
+        group.on("keydown", (event) => {
+          if (event.code === "Space" || event.code === "Enter") {
+            event.preventDefault();
+            if (!isPressed) {
+              setPressed(renderer, group, true);
+              isPressed = true;
+            }
+          }
+        });
+
+        group.on("keyup", (event) => {
+          if (event.code === "Space" || event.code === "Enter") {
+            event.preventDefault();
+            if (isPressed) {
+              setPressed(renderer, group, false);
+              isPressed = false;
+            }
+          }
         });
       },
     album:

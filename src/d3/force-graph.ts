@@ -40,10 +40,18 @@ export function renderArtistWithAlbumsForce(
     y: number;
     width: number;
   }) => D3ElementBuilder,
+  artistBuilder: (params: {
+    artistMbid: string;
+    artistName: string;
+    x: number;
+    y: number;
+    width: number;
+  }) => D3ElementBuilder,
   opts?: {
     width?: number;
     height?: number;
     albumCardWidth?: number;
+    artistCardWidth?: number;
   }
 ) {
   if (!albums.length) return () => {};
@@ -51,6 +59,7 @@ export function renderArtistWithAlbumsForce(
   const width = opts?.width ?? 800;
   const height = opts?.height ?? 600;
   const albumCardWidth = opts?.albumCardWidth ?? 150;
+  const artistCardWidth = opts?.artistCardWidth ?? 120;
 
   // Build nodes/links
   const artistName = albums[0].artist; // all albums share the same artist
@@ -77,45 +86,54 @@ export function renderArtistWithAlbumsForce(
   // Use the existing SVG from renderer
   const svg = renderer.svg;
 
+  // Create a hand-drawn style arrow marker (stroked, not filled)
+  const arrowMarker = renderer.defs
+    .append("marker")
+    .attr("id", "link-arrow")
+    .attr("viewBox", "0 0 10 10")
+    .attr("refX", 9)
+    .attr("refY", 5)
+    .attr("markerWidth", 7)
+    .attr("markerHeight", 7)
+    .attr("orient", "auto");
+
+  // Two lines forming a > shape
+  arrowMarker
+    .append("line")
+    .attr("x1", 3)
+    .attr("y1", 2)
+    .attr("x2", 10)
+    .attr("y2", 5)
+    .attr("stroke", "#fff")
+    .attr("stroke-width", 1.2);
+
+  arrowMarker
+    .append("line")
+    .attr("x1", 3)
+    .attr("y1", 8)
+    .attr("x2", 10)
+    .attr("y2", 5)
+    .attr("stroke", "#fff")
+    .attr("stroke-width", 1.2);
+
   // Create container groups that will hold the builders
   const albumGroups = new Map<
     string,
     d3.Selection<SVGGElement, unknown, null, undefined>
   >();
 
-  // Lines for links
-  const linkGroup = svg.append("g");
-  const link = linkGroup
-    .selectAll<SVGLineElement, Link>("line")
-    .data(links)
-    .join("line")
-    .attr("stroke", "rgba(255,255,255,0.25)")
-    .attr("stroke-width", 1);
+  // Create artist card using the builder
+  artistBuilder({
+    artistMbid,
+    artistName,
+    x: 0,
+    y: 0,
+    width: artistCardWidth,
+  })(renderer);
 
-  // Artist node (simple circle)
-  const artistGroup = svg
-    .append("g")
-    .attr("class", "artist-node")
-    .style("cursor", "pointer");
-
-  artistGroup
-    .append("circle")
-    .attr("r", 18)
-    .attr("fill", "#ffcc00")
-    .attr("stroke", "rgba(0,0,0,0.6)")
-    .attr("stroke-width", 1.2);
-
-  artistGroup
-    .append("text")
-    .text(artistName)
-    .attr("fill", "#eee")
-    .attr("font-size", 13)
-    .attr("text-anchor", "middle")
-    .attr("dy", 4)
-    .style("pointer-events", "none");
-
-  // Store album card heights for proper centering
-  const albumCardHeights = new Map<string, number>();
+  // Store card dimensions for proper centering and link calculations
+  const albumCardBBoxes = new Map<string, DOMRect>();
+  const artistCardBBox: { bbox: DOMRect | null } = { bbox: null };
 
   // Create album cards at initial positions (will be updated by simulation)
   albumNodes.forEach((albumNode) => {
@@ -134,42 +152,175 @@ export function renderArtistWithAlbumsForce(
     if (groupNode) {
       albumGroups.set(albumNode.id, positionGroup as any);
 
-      // Get the actual height of the album card for proper centering
+      // Get the actual bounding box of the album card
       if (groupNode instanceof SVGGraphicsElement) {
         const bbox = groupNode.getBBox();
-        albumCardHeights.set(albumNode.id, bbox.height);
+        albumCardBBoxes.set(albumNode.id, bbox);
       }
     }
   });
 
+  // Get artist card bounding box
+  const artistPositionGroup = svg.select(`#position-artist-${artistMbid}`);
+  const artistGroupNode = artistPositionGroup.node();
+  if (artistGroupNode && artistGroupNode instanceof SVGGraphicsElement) {
+    artistCardBBox.bbox = artistGroupNode.getBBox();
+  }
+
+  // Lines for links - wrap each in a group for animation
+  // Render AFTER album cards so they appear above the shadows
+  const linkGroup = svg.append("g");
+  const linkGroups = linkGroup
+    .selectAll<SVGGElement, Link>("g")
+    .data(links)
+    .join("g")
+    .attr("filter", "url(#floatShadow)"); // Apply shadow to the group so it includes the arrow marker
+
+  // Add floating animation to each link group
+  linkGroups.each(function () {
+    const group = d3.select(this);
+    const groupNode = group.node();
+    if (!groupNode) return;
+
+    // Clone vertical float animation
+    const floatAnimTemplate = renderer.defs.select("#floatAnimTemplate");
+    const floatAnim = floatAnimTemplate.select("animateTransform").node();
+    if (floatAnim) {
+      groupNode.appendChild((floatAnim as SVGAnimateElement).cloneNode(true));
+    }
+  });
+
+  const link = linkGroups
+    .append("line")
+    .attr("stroke", "#fff")
+    .attr("stroke-width", 2)
+    .attr("marker-end", "url(#link-arrow)")
+    .style("pointer-events", "none");
+
   function ticked() {
-    // Update links
+    // Update links with gaps calculated from actual bounding boxes
     link
-      .attr("x1", (d: any) => d.source.x)
-      .attr("y1", (d: any) => d.source.y)
-      .attr("x2", (d: any) => d.target.x)
-      .attr("y2", (d: any) => d.target.y);
+      .attr("x1", (d: any) => {
+        // Calculate angle from album to artist
+        const dx = d.target.x - d.source.x;
+        const dy = d.target.y - d.source.y;
+        const angle = Math.atan2(dy, dx);
+
+        // Get actual bbox for this album card
+        const bbox = albumCardBBoxes.get(d.source.id);
+        if (!bbox) return d.source.x;
+
+        // Calculate distance from center to edge along the angle
+        // Use half-width and half-height of the actual bbox
+        const halfWidth = bbox.width / 2;
+        const halfHeight = bbox.height / 2;
+
+        // Calculate intersection point with rectangle edge
+        const tanAngle = Math.abs(Math.tan(angle));
+        let distance;
+        if (tanAngle * halfWidth <= halfHeight) {
+          // Intersects left or right edge
+          distance = Math.abs(halfWidth / Math.cos(angle));
+        } else {
+          // Intersects top or bottom edge
+          distance = Math.abs(halfHeight / Math.sin(angle));
+        }
+
+        const gap = 10; // pixels of space between link and card edge
+        return d.source.x + Math.cos(angle) * (distance + gap);
+      })
+      .attr("y1", (d: any) => {
+        const dx = d.target.x - d.source.x;
+        const dy = d.target.y - d.source.y;
+        const angle = Math.atan2(dy, dx);
+
+        const bbox = albumCardBBoxes.get(d.source.id);
+        if (!bbox) return d.source.y;
+
+        const halfWidth = bbox.width / 2;
+        const halfHeight = bbox.height / 2;
+
+        const tanAngle = Math.abs(Math.tan(angle));
+        let distance;
+        if (tanAngle * halfWidth <= halfHeight) {
+          distance = Math.abs(halfWidth / Math.cos(angle));
+        } else {
+          distance = Math.abs(halfHeight / Math.sin(angle));
+        }
+
+        const gap = 10;
+        return d.source.y + Math.sin(angle) * (distance + gap);
+      })
+      .attr("x2", (d: any) => {
+        // Calculate angle from artist to album
+        const dx = d.source.x - d.target.x;
+        const dy = d.source.y - d.target.y;
+        const angle = Math.atan2(dy, dx);
+
+        const bbox = artistCardBBox.bbox;
+        if (!bbox) return d.target.x;
+
+        const halfWidth = bbox.width / 2;
+        const halfHeight = bbox.height / 2;
+
+        const tanAngle = Math.abs(Math.tan(angle));
+        let distance;
+        if (tanAngle * halfWidth <= halfHeight) {
+          distance = Math.abs(halfWidth / Math.cos(angle));
+        } else {
+          distance = Math.abs(halfHeight / Math.sin(angle));
+        }
+
+        const gap = 10;
+        return d.target.x + Math.cos(angle) * (distance + gap);
+      })
+      .attr("y2", (d: any) => {
+        const dx = d.source.x - d.target.x;
+        const dy = d.source.y - d.target.y;
+        const angle = Math.atan2(dy, dx);
+
+        const bbox = artistCardBBox.bbox;
+        if (!bbox) return d.target.y;
+
+        const halfWidth = bbox.width / 2;
+        const halfHeight = bbox.height / 2;
+
+        const tanAngle = Math.abs(Math.tan(angle));
+        let distance;
+        if (tanAngle * halfWidth <= halfHeight) {
+          distance = Math.abs(halfWidth / Math.cos(angle));
+        } else {
+          distance = Math.abs(halfHeight / Math.sin(angle));
+        }
+
+        const gap = 10;
+        return d.target.y + Math.sin(angle) * (distance + gap);
+      });
 
     // Update artist position
     if (artistNode.x !== undefined && artistNode.y !== undefined) {
-      artistGroup.attr(
-        "transform",
-        `translate(${artistNode.x},${artistNode.y})`
-      );
+      const bbox = artistCardBBox.bbox;
+      if (bbox) {
+        artistPositionGroup.attr(
+          "transform",
+          `translate(${artistNode.x - bbox.width / 2},${
+            artistNode.y - bbox.height / 2
+          })`
+        );
+      }
     }
 
     // Update album positions
     albumNodes.forEach((albumNode) => {
       if (albumNode.x !== undefined && albumNode.y !== undefined) {
         const group = albumGroups.get(albumNode.id);
-        if (group) {
+        const bbox = albumCardBBoxes.get(albumNode.id);
+        if (group && bbox) {
           // Translate to position, but also offset by half the card size to center it
-          const cardHeight =
-            albumCardHeights.get(albumNode.id) || albumCardWidth;
           group.attr(
             "transform",
-            `translate(${albumNode.x - albumCardWidth / 2},${
-              albumNode.y - cardHeight / 2
+            `translate(${albumNode.x - bbox.width / 2},${
+              albumNode.y - bbox.height / 2
             })`
           );
         }
@@ -199,9 +350,16 @@ export function renderArtistWithAlbumsForce(
       "collide",
       d3
         .forceCollide()
-        .radius((d: any) =>
-          d.type === "artist" ? 30 : albumCardWidth / 2 + 20
-        )
+        .radius((d: any) => {
+          if (d.type === "artist") {
+            return artistCardBBox.bbox
+              ? Math.max(artistCardBBox.bbox.width, artistCardBBox.bbox.height) /
+                  2 +
+                  20
+              : 30;
+          }
+          return albumCardWidth / 2 + 20;
+        })
     )
     .force(
       "radial",
