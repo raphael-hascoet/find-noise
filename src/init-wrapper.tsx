@@ -1,37 +1,26 @@
-import { useSetAtom } from "jotai";
-import { useEffect, useState, type PropsWithChildren } from "react";
-import { AlbumsPool, albumsPoolAtom } from "./data/albums-pool";
+import { useAtomValue, useSetAtom } from "jotai";
+import React, { useEffect } from "react";
+import {
+  albumsErrorAtom,
+  albumsHaveLoadedAtom,
+  albumsLoadingAtom,
+  initAlbumsFromUrlAtom,
+} from "./data/albums-pool-atoms";
 
-export const InitWrapper = ({ children }: PropsWithChildren) => {
-  const setAlbumsPool = useSetAtom(albumsPoolAtom);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const [error, setError] = useState<string | null>(null);
+export const InitWrapper: React.FC<React.PropsWithChildren> = ({
+  children,
+}) => {
+  const init = useSetAtom(initAlbumsFromUrlAtom);
+  const loading = useAtomValue(albumsLoadingAtom);
+  const error = useAtomValue(albumsErrorAtom);
+  const hasLoaded = useAtomValue(albumsHaveLoadedAtom);
 
   useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        const albumsPool = new AlbumsPool();
-        await albumsPool.initFromFile("/albums-data.jsonl");
-        setAlbumsPool(albumsPool);
-        setIsLoading(false);
-      } catch (err) {
-        // Handle initialization errors
-        setError("Failed to initialize the application.");
-        setIsLoading(false);
-      }
-    };
+    init("/albums-data.jsonl");
+  }, [init]);
 
-    initializeApp();
-  }, []);
-
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
-
-  if (error) {
-    return <div>Error: {error}</div>;
-  }
-
-  return children;
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!hasLoaded) return <div>No albums loaded</div>;
+  return <>{children}</>;
 };
