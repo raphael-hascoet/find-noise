@@ -1,12 +1,17 @@
 import * as d3 from "d3";
-import { useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { D3SvgRenderer } from "../../d3/renderer";
 import { AlbumCardReact } from "../AlbumCard";
 import { ArtistCardReact } from "../ArtistCard";
 import { GenreCardReact } from "../GenreCard";
+import { initForceGraphDimensionsAtom } from "./force-graph-dimensions";
 import { ForceGraphLinks, type ForceGraphLink } from "./force-graph-links";
-import { forceGraphInitNodesAtom } from "./force-graph-manager";
+import {
+  forceGraphGetRootNodeDefAtom,
+  type ForceGraphNodeDef,
+  type ForceGraphNodeDefByType,
+} from "./force-graph-nodes-manager";
 
 export type ForceGraphNode = {
   id: string;
@@ -17,36 +22,8 @@ export type ForceGraphNode = {
   fx?: number | null;
   fy?: number | null;
   onZoomClick?: () => void;
-} & ForceGraphNodeDefByType;
-
-export type ForceGraphNodeDefBase = {
-  id: string;
-  children?: ForceGraphNodeDef[];
-  onZoomClick?: () => void;
+  context: ForceGraphNodeDefByType;
 };
-
-export type ForceGraphNodeDefByType =
-  | {
-      type: "artist";
-      data: {
-        name: string;
-      };
-    }
-  | {
-      type: "album";
-      data: {
-        title: string;
-        artist: string;
-      };
-    }
-  | {
-      type: "genre";
-      data: {
-        name: string;
-      };
-    };
-
-export type ForceGraphNodeDef = ForceGraphNodeDefByType & ForceGraphNodeDefBase;
 
 type ForceGraphProps = {
   nodeDef: ForceGraphNodeDef;
@@ -56,7 +33,18 @@ type ForceGraphProps = {
   artistCardWidth?: number;
 };
 
-export const ForceGraph = function ForceGraph({
+export const ForceGraph = function (props: Omit<ForceGraphProps, "nodeDef">) {
+  const nodeDef = useAtomValue(forceGraphGetRootNodeDefAtom);
+
+  console.log(nodeDef);
+  if (!nodeDef) {
+    return null;
+  }
+
+  return <ForceGraphContent nodeDef={nodeDef} {...props} />;
+};
+
+const ForceGraphContent = function ({
   nodeDef,
   width = 800,
   height = 600,
@@ -66,7 +54,7 @@ export const ForceGraph = function ForceGraph({
   const svgRef = useRef<SVGSVGElement>(null);
   const rendererRef = useRef<D3SvgRenderer | null>(null);
 
-  const forceGraphInitNodes = useSetAtom(forceGraphInitNodesAtom);
+  const initForceGraphDimensions = useSetAtom(initForceGraphDimensionsAtom);
 
   if (!nodeDef) {
     return null;
@@ -120,31 +108,50 @@ export const ForceGraph = function ForceGraph({
     undefined
   > | null>(null);
 
+  function createNodeRecursive({
+    node,
+    map,
+  }: {
+    node: ForceGraphNodeDef;
+    map: Map<string, ForceGraphNode>;
+  }) {
+    const { children, ...rest } = node;
+
+    map.set(rest.id, { ...rest });
+
+    children?.forEach((child) => createNodeRecursive({ node: child, map }));
+
+    return map;
+  }
+
   const simNodes = useMemo<ForceGraphNode[]>(() => {
-    const { children, ...rest } = nodeDef;
+    const nodeIdMap = new Map<string, ForceGraphNode>();
+    createNodeRecursive({ node: nodeDef, map: nodeIdMap });
+    return Array.from(nodeIdMap.values());
+  }, [nodeDef]);
+
+  function createLinksRecursive(node: ForceGraphNodeDef): ForceGraphLink[] {
+    const { children } = node;
 
     return [
-      { ...rest },
-      ...(children ?? []).map((child) => ({
-        ...child,
-      })),
+      ...(children?.map((child) => ({
+        source: node,
+        target: child,
+      })) ?? []),
+      ...(children?.flatMap((child) => createLinksRecursive(child)) ?? []),
     ];
-  }, [nodeDef.id]);
+  }
 
   const simLinks = useMemo<ForceGraphLink[]>(
-    () =>
-      (nodeDef.children ?? []).map((a) => ({
-        source: nodeDef,
-        target: a,
-      })),
-    [nodeDef.id],
+    () => createLinksRecursive(nodeDef),
+    [nodeDef],
   );
 
   useEffect(() => {
-    forceGraphInitNodes(
+    initForceGraphDimensions(
       simNodes.map((node) => ({ id: node.id, loaded: false })),
     );
-  }, [nodeDef.id]);
+  }, [nodeDef]);
 
   useEffect(() => {
     const simulation = d3
@@ -377,16 +384,19 @@ export const ForceGraph = function ForceGraph({
                 cursor: "grab",
               }}
             >
-              {n.type === "artist" ? (
-                <ArtistCardReact artistName={n.data.name} nodeId={n.id} />
-              ) : n.type === "album" ? (
+              {n.context.type === "artist" ? (
+                <ArtistCardReact
+                  artistName={n.context.data.name}
+                  nodeId={n.id}
+                />
+              ) : n.context.type === "album" ? (
                 <AlbumCardReact
                   albumId={n.id}
                   nodeId={n.id}
                   onClick={n.onZoomClick}
                 />
-              ) : n.type === "genre" ? (
-                <GenreCardReact genreName={n.data.name} nodeId={n.id} />
+              ) : n.context.type === "genre" ? (
+                <GenreCardReact genreName={n.context.data.name} nodeId={n.id} />
               ) : null}
             </div>
           );

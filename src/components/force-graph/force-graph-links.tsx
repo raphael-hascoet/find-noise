@@ -2,9 +2,9 @@ import { useAtomValue } from "jotai";
 import { useMemo } from "react";
 import type { ForceGraphNode } from "./force-graph";
 import {
-  forceGraphNodesWithRenderedLinksAtom,
-  type RenderedForceGraphNodeLoaded,
-} from "./force-graph-manager";
+  forceGraphAllDimensionsLoadedAtom,
+  type ForceGraphDimensionsLoaded,
+} from "./force-graph-dimensions";
 
 export type ForceGraphLink = {
   source: ForceGraphNode;
@@ -13,8 +13,8 @@ export type ForceGraphLink = {
 
 type RenderedLink = {
   link: ForceGraphLink;
-  sourceNode: RenderedForceGraphNodeLoaded;
-  targetNode: RenderedForceGraphNodeLoaded;
+  sourceNode: ForceGraphDimensionsLoaded;
+  targetNode: ForceGraphDimensionsLoaded;
 };
 
 export const ForceGraphLinks = ({
@@ -32,15 +32,15 @@ export const ForceGraphLinks = ({
     }
   >;
 }) => {
-  const forceGraphNodesWithRenderedLinks = useAtomValue(
-    forceGraphNodesWithRenderedLinksAtom,
+  const forceGraphAllDimensionsLoaded = useAtomValue(
+    forceGraphAllDimensionsLoadedAtom,
   );
 
   const renderedLinks = useMemo(() => {
     return links
       .map((link): RenderedLink | null => {
-        const sourceNode = forceGraphNodesWithRenderedLinks.get(link.source.id);
-        const targetNode = forceGraphNodesWithRenderedLinks.get(link.target.id);
+        const sourceNode = forceGraphAllDimensionsLoaded.get(link.source.id);
+        const targetNode = forceGraphAllDimensionsLoaded.get(link.target.id);
 
         if (sourceNode && targetNode) {
           return { link, targetNode, sourceNode };
@@ -48,9 +48,9 @@ export const ForceGraphLinks = ({
         return null;
       })
       .filter((link) => link !== null);
-  }, [links, forceGraphNodesWithRenderedLinks]);
+  }, [links, forceGraphAllDimensionsLoaded]);
 
-  if (forceGraphNodesWithRenderedLinks.size === 0) return null;
+  if (forceGraphAllDimensionsLoaded.size === 0) return null;
 
   // Helper to get position
   const getPos = (n: ForceGraphNode) => {

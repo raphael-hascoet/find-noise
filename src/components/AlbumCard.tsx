@@ -1,8 +1,9 @@
-import { useAtomValue } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { ZoomIn } from "lucide-react";
 import { getAlbumCoverUrl } from "../data/album-cover-urls";
 import { albumDataSelectorsAtom } from "../data/albums-pool-atoms";
 import { ForceGraphNode } from "./force-graph-node";
+import { forceGraphAddChildrenToNodeDefAtom } from "./force-graph/force-graph-nodes-manager";
 
 type AlbumCardProps = {
   nodeId: string;
@@ -14,6 +15,25 @@ export function AlbumCardReact({ albumId, nodeId, onClick }: AlbumCardProps) {
   const selectors = useAtomValue(albumDataSelectorsAtom);
   const album = selectors.byMbid(albumId);
   const coverUrl = getAlbumCoverUrl(albumId);
+
+  const genres = selectors.genresForAlbum(albumId);
+
+  const addChildren = useSetAtom(forceGraphAddChildrenToNodeDefAtom);
+
+  const handleZoomClick = () => {
+    addChildren({
+      parentId: nodeId,
+      children: genres.map((id) => ({
+        id,
+        context: {
+          data: {
+            name: id,
+          },
+          type: "genre",
+        },
+      })),
+    });
+  };
 
   return (
     <ForceGraphNode nodeId={nodeId}>
@@ -34,7 +54,7 @@ export function AlbumCardReact({ albumId, nodeId, onClick }: AlbumCardProps) {
       <button
         onClick={(e) => {
           e.stopPropagation();
-          onClick?.(albumId);
+          handleZoomClick();
         }}
         className="cursor-pointer rounded-full p-1 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
       >

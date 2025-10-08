@@ -1,59 +1,59 @@
-import { useAtomValue } from "jotai";
-import { useMemo, useState } from "react";
+import { atom, useAtomValue, useSetAtom } from "jotai";
+import { useEffect } from "react";
 import { albumDataSelectorsAtom } from "../data/albums-pool-atoms";
-import { ForceGraph, type ForceGraphNodeDef } from "./force-graph/force-graph";
+import { ForceGraph } from "./force-graph/force-graph";
+import {
+  forceGraphSetRootNodeDefAtom,
+  type ForceGraphNodeDef,
+} from "./force-graph/force-graph-nodes-manager";
 
-function DrawArea() {
-  const { randomN, byArtistMbid, genresForAlbum } = useAtomValue(
-    albumDataSelectorsAtom,
-  );
-
-  // Get a random artist and their albums (only once on mount)
-  const { artistMbid, albums } = useMemo(() => {
-    const randomAlbums = randomN(1);
-    console.log(randomAlbums);
-    const artistMbid = randomAlbums[0]["artist-mbid"];
-    const artistAlbums = byArtistMbid(artistMbid);
-
-    return { artistMbid, albums: artistAlbums };
-  }, []); // Empty deps - only run once
-
-  const initialNodeDef: ForceGraphNodeDef = {
-    id: artistMbid,
-    children: albums.map((album) => ({
+export const defaultNodeDefAtom = atom((get): ForceGraphNodeDef => {
+  const randomAlbum = get(albumDataSelectorsAtom).randomN(1)[0];
+  const artistId = randomAlbum["artist-mbid"];
+  const albumsForArtist = get(albumDataSelectorsAtom).byArtistMbid(artistId);
+  return {
+    id: artistId,
+    children: albumsForArtist.map((album) => ({
       id: album.mbid,
-      type: "album",
-      data: {
-        title: album.release,
-        artist: album.artist,
-      },
-      onZoomClick: () => {
-        setNodeDef({
-          id: album.mbid,
-          children: genresForAlbum(album.mbid).map((genre) => ({
-            id: genre,
-            type: "genre",
-            data: {
-              name: genre,
-            },
-          })),
-          type: "album",
-          data: {
-            title: album.release,
-            artist: album.artist,
-          },
-        });
+      context: {
+        type: "album",
+        data: {
+          title: album.release,
+          artist: album.artist,
+        },
       },
     })),
-    type: "artist",
-    data: {
-      name: albums[0].artist,
+    context: {
+      type: "artist",
+      data: {
+        name: albumsForArtist[0].artist,
+      },
     },
   };
+});
 
-  const [nodeDef, setNodeDef] = useState<ForceGraphNodeDef>(initialNodeDef);
+function DrawArea() {
+  const defaultNodeDef = useAtomValue(defaultNodeDefAtom);
+  const setRootNodeDef = useSetAtom(forceGraphSetRootNodeDefAtom);
 
-  console.log({ nodeDef });
+  useEffect(() => {
+    setRootNodeDef(defaultNodeDef);
+  }, [defaultNodeDef]);
+  // Get a random artist and their albums (only once on mount)
+  // const { artistMbid, albums } = useMemo(() => {
+  //   const randomAlbums = randomN(1);
+  //   console.log(randomAlbums);
+  //   const artistMbid = randomAlbums[0]["artist-mbid"];
+  //   const artistAlbums = byArtistMbid(artistMbid);
+
+  //   return { artistMbid, albums: artistAlbums };
+  // }, []); // Empty deps - only run once
+
+  // const initialNodeDef: ForceGraphNodeDef =
+
+  // const [nodeDef, setNodeDef] = useState<ForceGraphNodeDef>(initialNodeDef);
+
+  // console.log({ nodeDef });
 
   return (
     <div
@@ -66,7 +66,7 @@ function DrawArea() {
     >
       <div className="relative">
         <ForceGraph
-          nodeDef={nodeDef}
+          // nodeDef={nodeDef}
           width={800}
           height={600}
           albumCardWidth={100}
