@@ -77,8 +77,8 @@ export const registerForceGraphDimensionsAtom = atom(
       return;
     }
 
-    const nodeIds = Object.keys(updatedNodes);
-    const updatedLoadedNodeIds = Object.keys(updatedLoadedNodes);
+    const nodeIds = Array.from(updatedNodes.keys());
+    const updatedLoadedNodeIds = Array.from(updatedLoadedNodes.keys());
 
     if (nodeIds.every((key) => updatedLoadedNodeIds.includes(key))) {
       set(forceGraphAllDimensionsLoadedAtom, updatedLoadedNodes);
@@ -89,3 +89,6 @@ export const registerForceGraphDimensionsAtom = atom(
 export const forceGraphAllDimensionsLoadedAtom = atom(
   new Map<string, ForceGraphDimensionsLoaded>(),
 );
+
+export const nodeDimensionsLoadedAtom = (nodeId: string) =>
+  atom((get) => get(forceGraphAllDimensionsLoadedAtom).get(nodeId));

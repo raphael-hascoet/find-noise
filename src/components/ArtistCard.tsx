@@ -1,17 +1,15 @@
-import { ForceGraphNode } from "./force-graph-node";
+import { ForceGraphNode, type ForceGraphNodeBase } from "./force-graph-node";
 
 type ArtistCardProps = {
-  nodeId: string;
   artistName: string;
-};
+} & ForceGraphNodeBase;
 
 export function ArtistCardReact({
   artistName,
-
-  nodeId,
+  ...graphNodeProps
 }: ArtistCardProps) {
   return (
-    <ForceGraphNode nodeId={nodeId}>
+    <ForceGraphNode {...graphNodeProps}>
       <span className="text-center font-sans text-sm text-gray-300">
         {artistName}
       </span>

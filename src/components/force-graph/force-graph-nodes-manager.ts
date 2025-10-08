@@ -1,4 +1,5 @@
 import { atom } from "jotai";
+import type { AlbumCardVariant } from "../AlbumCard";
 
 export type ForceGraphNodeDefBase = {
   id: string;
@@ -18,6 +19,7 @@ export type ForceGraphNodeDefByType =
       data: {
         title: string;
         artist: string;
+        variant: AlbumCardVariant;
       };
     }
   | {
