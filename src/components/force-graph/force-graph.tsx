@@ -1,10 +1,19 @@
 import * as d3 from "d3";
 import { useAtomValue, useSetAtom } from "jotai";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { animate } from "motion";
+import { AnimatePresence, motion, useMotionValue } from "motion/react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { D3SvgRenderer } from "../../d3/renderer";
 import { albumDataSelectorsAtom } from "../../data/albums-pool-atoms";
-import { AlbumCardReact } from "../AlbumCard";
-import { ArtistCardReact } from "../ArtistCard";
+import { AlbumCard } from "../AlbumCard";
+import { ArtistCard } from "../ArtistCard";
 import { GenreCardReact } from "../GenreCard";
 import { initForceGraphDimensionsAtom } from "./force-graph-dimensions";
 import {
@@ -13,9 +22,15 @@ import {
   type ForceGraphNodeDefByType,
 } from "./force-graph-nodes-manager";
 import {
+  activeViewConfigReadOnlyAtom,
   calculatedNodeDefsAtom,
   calculatedNodePositionsAtom,
+  createViewActionsAtom,
   setActiveViewAtom,
+  transitioningNodesAtom,
+  type ViewActionsAtomOutput,
+  type ViewData,
+  type ViewKey,
 } from "./force-graph-views";
 
 export type ForceGraphNode = {
@@ -43,17 +58,10 @@ export const ForceGraph = function (
   useEffect(() => {
     if (!nodeDef || nodeDef.context.type !== "artist") return;
 
-    const albums = selectors.byArtistMbid(nodeDef.id);
-
     setActiveView({
       key: "albumsForArtist",
       data: {
         artistId: nodeDef.id,
-        artistName: nodeDef.context.data.name,
-        albums: albums.map((a) => ({
-          id: a.mbid,
-          releaseYear: a["release-date"].split("-")[0] || "Unknown",
-        })),
       },
     });
   }, [nodeDef, selectors, setActiveView]);
@@ -75,6 +83,20 @@ const ForceGraphContent = function ({
 
   const initForceGraphDimensions = useSetAtom(initForceGraphDimensionsAtom);
   const positions = useAtomValue(calculatedNodePositionsAtom);
+  const setActiveView = useSetAtom(setActiveViewAtom);
+  const activeViewConfig = useAtomValue(activeViewConfigReadOnlyAtom);
+  const setTransitionNodes = useSetAtom(transitioningNodesAtom);
+
+  // Create view actions atom with changeView callback
+  const viewActionsAtom = useMemo(
+    () =>
+      createViewActionsAtom(<K extends ViewKey>(key: K, data: ViewData<K>) => {
+        setActiveView({ key, data });
+      }),
+    [setActiveView],
+  );
+
+  const viewActions = useAtomValue(viewActionsAtom);
 
   // Initialize renderer for defs (filters, markers, etc.)
   useEffect(() => {
@@ -122,22 +144,15 @@ const ForceGraphContent = function ({
     );
   }, [nodeDefs, initForceGraphDimensions]);
 
-  useEffect(() => {
-    const svg = d3.select((svgRef as RefObject<SVGSVGElement>).current);
-    svg.call(
-      d3
-        .zoom<SVGSVGElement, unknown>()
-
-        .scaleExtent([0.2, 4])
-        .on("zoom", (e) => setTransform(e.transform)),
-    );
-  }, []);
-
-  const t = transform;
-  const toScreen = (p: { x: number; y: number }) => ({
-    left: p.x * t.k + t.x,
-    top: p.y * t.k + t.y,
-  });
+  // useEffect(() => {
+  //   const svg = d3.select((svgRef as RefObject<SVGSVGElement>).current);
+  //   svg.call(
+  //     d3
+  //       .zoom<SVGSVGElement, unknown>()
+  //       .scaleExtent([0.2, 4])
+  //       .on("zoom", (e) => setTransform(e.transform)),
+  //   );
+  // }, []);
 
   return (
     <>
@@ -145,7 +160,7 @@ const ForceGraphContent = function ({
         ref={svgRef}
         width={width}
         height={height}
-        style={{ border: "1px solid #333" }}
+        // style={{ border: "1px solid #333" }}
       >
         {/* <ForceGraphLinks
           links={simLinks}
@@ -159,43 +174,129 @@ const ForceGraphContent = function ({
           position: "absolute",
           inset: 0,
           pointerEvents: "none",
+          transform: `scale(${transform.k})`,
         }}
       >
-        {Array.from(nodeDefs.values()).map((n) => {
-          const p = positions?.get(n.id);
+        <AnimatePresence
+          mode="popLayout"
+          onExitComplete={() => setTransitionNodes(new Map())}
+        >
+          {Array.from(nodeDefs.entries()).map(([nodeId, n]) => {
+            const hasPosition = positions?.has(nodeId) ?? false;
+            const graphPos = positions?.get(nodeId);
 
-          const screen = p ? toScreen(p) : { left: 0, top: 0 };
-          return (
-            <div
-              key={n.id}
-              style={{
-                position: "absolute",
-                left: screen.left,
-                top: screen.top,
-                transform: `scale(${transform.k})`,
-                pointerEvents: "auto",
-                transformOrigin: "top left",
-              }}
-            >
-              {n.context.type === "artist" ? (
-                <ArtistCardReact
-                  artistName={n.context.data.name}
-                  nodeId={n.id}
-                  positioned={!!p}
+            const screenPos = graphPos
+              ? {
+                  left: graphPos.x + transform.x,
+                  top: graphPos.y + transform.y,
+                }
+              : { left: 0, top: 0 };
+
+            if (!hasPosition) {
+              return (
+                <div key={`shell-${nodeId}`} className="opacity-0">
+                  <NodeContent
+                    hasPosition={hasPosition}
+                    nodeDef={n}
+                    viewActions={viewActions}
+                  />
+                </div>
+              );
+            }
+
+            return (
+              <NodeMotion
+                key={nodeId}
+                left={screenPos.left}
+                top={screenPos.top}
+              >
+                <NodeContent
+                  hasPosition={hasPosition}
+                  nodeDef={n}
+                  viewActions={viewActions}
                 />
-              ) : n.context.type === "album" ? (
-                <AlbumCardReact
-                  nodeId={n.id}
-                  positioned={!!p}
-                  onClick={n.onZoomClick}
-                />
-              ) : n.context.type === "genre" ? (
-                <GenreCardReact genreName={n.context.data.name} nodeId={n.id} />
-              ) : null}
-            </div>
-          );
-        })}
+              </NodeMotion>
+            );
+          })}
+        </AnimatePresence>
       </div>
     </>
   );
 };
+
+const NodeContent = ({
+  hasPosition,
+  nodeDef,
+  viewActions,
+}: {
+  hasPosition: boolean;
+  nodeDef: ForceGraphNodeDef;
+  viewActions: ViewActionsAtomOutput<ViewKey> | null;
+}) => {
+  return nodeDef.context.type === "artist" ? (
+    <ArtistCard
+      context={nodeDef.context}
+      nodeId={nodeDef.id}
+      positioned={hasPosition}
+    />
+  ) : nodeDef.context.type === "album" ? (
+    <AlbumCard
+      nodeId={nodeDef.id}
+      positioned={hasPosition}
+      viewActions={viewActions}
+      context={nodeDef.context}
+    />
+  ) : nodeDef.context.type === "genre" ? (
+    <GenreCardReact
+      genreName={nodeDef.context.data.name}
+      nodeId={nodeDef.id}
+      positioned={hasPosition}
+    />
+  ) : null;
+};
+
+function NodeMotion({
+  left,
+  top,
+  children,
+}: {
+  left: number;
+  top: number;
+  children: React.ReactNode;
+}) {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const prev = useRef<{ left: number; top: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (prev.current) {
+      const dx = prev.current.left - left;
+      const dy = prev.current.top - top;
+      x.set(dx);
+      y.set(dy);
+      animate(x, 0, { duration: 0.6, ease: [0.22, 1, 0.36, 1] });
+      animate(y, 0, { duration: 0.6, ease: [0.22, 1, 0.36, 1] });
+    }
+    prev.current = { left, top };
+  }, [left, top, x, y]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ opacity: { duration: 0.6, ease: "easeOut" } }}
+      style={{
+        position: "absolute",
+        left,
+        top,
+        x,
+        y,
+        transformOrigin: "top left",
+        pointerEvents: "auto",
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}

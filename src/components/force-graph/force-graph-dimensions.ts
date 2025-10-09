@@ -44,6 +44,8 @@ export const registerForceGraphDimensionsAtom = atom(
   (get, set, node: ForceGraphDimensionsLoaded) => {
     let hasUpdated = false;
 
+    console.log("Registering force graph dimensions:", node);
+
     const currentNodes = get(forceGraphDimensionsAtom);
     let updatedNodes = currentNodes;
     const currentNode = currentNodes.get(node.id);

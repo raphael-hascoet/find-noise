@@ -20,6 +20,7 @@ export const defaultNodeDefAtom = atom((get): ForceGraphNodeDef => {
         data: {
           title: album.release,
           artist: album.artist,
+          variant: "flowchart",
         },
       },
     })),
@@ -39,21 +40,6 @@ function DrawArea() {
   useEffect(() => {
     setRootNodeDef(defaultNodeDef);
   }, [defaultNodeDef]);
-  // Get a random artist and their albums (only once on mount)
-  // const { artistMbid, albums } = useMemo(() => {
-  //   const randomAlbums = randomN(1);
-  //   console.log(randomAlbums);
-  //   const artistMbid = randomAlbums[0]["artist-mbid"];
-  //   const artistAlbums = byArtistMbid(artistMbid);
-
-  //   return { artistMbid, albums: artistAlbums };
-  // }, []); // Empty deps - only run once
-
-  // const initialNodeDef: ForceGraphNodeDef =
-
-  // const [nodeDef, setNodeDef] = useState<ForceGraphNodeDef>(initialNodeDef);
-
-  // console.log({ nodeDef });
 
   return (
     <div
@@ -65,11 +51,7 @@ function DrawArea() {
       }}
     >
       <div className="relative">
-        <ForceGraph
-          // nodeDef={nodeDef}
-          width={800}
-          height={600}
-        />
+        <ForceGraph width={800} height={600} />
       </div>
     </div>
   );

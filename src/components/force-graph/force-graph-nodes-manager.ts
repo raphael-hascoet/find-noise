@@ -7,27 +7,33 @@ export type ForceGraphNodeDefBase = {
   onZoomClick?: () => void;
 };
 
+export type ArtistContext = {
+  type: "artist";
+  data: {
+    name: string;
+  };
+};
+
+export type AlbumContext = {
+  type: "album";
+  data: {
+    title: string;
+    artist: string;
+    variant: AlbumCardVariant;
+  };
+};
+
+export type GenreContext = {
+  type: "genre";
+  data: {
+    name: string;
+  };
+};
+
 export type ForceGraphNodeDefByType =
-  | {
-      type: "artist";
-      data: {
-        name: string;
-      };
-    }
-  | {
-      type: "album";
-      data: {
-        title: string;
-        artist: string;
-        variant: AlbumCardVariant;
-      };
-    }
-  | {
-      type: "genre";
-      data: {
-        name: string;
-      };
-    };
+  | ArtistContext
+  | AlbumContext
+  | GenreContext;
 
 export type ForceGraphNodeDef = ForceGraphNodeDefBase & {
   context: ForceGraphNodeDefByType;

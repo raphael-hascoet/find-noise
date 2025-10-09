@@ -1,51 +1,51 @@
-import { useAtomValue, useSetAtom } from "jotai";
+import { useAtomValue } from "jotai";
 import { ZoomIn } from "lucide-react";
+import { memo } from "react";
 import { getAlbumCoverUrl } from "../data/album-cover-urls";
 import { albumDataSelectorsAtom } from "../data/albums-pool-atoms";
 import { ForceGraphNode, type ForceGraphNodeBase } from "./force-graph-node";
-import { forceGraphAddChildrenToNodeDefAtom } from "./force-graph/force-graph-nodes-manager";
-import { nodeContextFamily } from "./force-graph/force-graph-views";
+import type { AlbumContext } from "./force-graph/force-graph-nodes-manager";
+import {
+  isViewActionsForKey,
+  transitioningNodesFamily,
+  type ViewActionsAtomOutput,
+  type ViewKey,
+} from "./force-graph/force-graph-views";
 
 type AlbumCardProps = {
-  onClick?: (id: string) => void;
+  viewActions: ViewActionsAtomOutput<ViewKey> | null;
+  context: AlbumContext;
 } & ForceGraphNodeBase;
 
-export type AlbumCardVariant = "full" | "no-artist";
+export type AlbumCardVariant = "flowchart" | "albumsForArtist";
 
-export function AlbumCardReact({ onClick, ...graphNodeProps }: AlbumCardProps) {
-  const nodeContext = useAtomValue(nodeContextFamily(graphNodeProps.nodeId));
+export const AlbumCard = memo(function AlbumCard({
+  viewActions,
+  context,
+  ...graphNodeProps
+}: AlbumCardProps) {
+  console.log("render");
 
-  if (!nodeContext || nodeContext.type !== "album") return null;
-
+  const transitioningNode = useAtomValue(
+    transitioningNodesFamily(graphNodeProps.nodeId),
+  );
   const selectors = useAtomValue(albumDataSelectorsAtom);
+
+  const contextWithBackup = context ?? transitioningNode?.context;
+
+  if (!contextWithBackup || contextWithBackup.type !== "album") return null;
+
   const album = selectors.byMbid(graphNodeProps.nodeId);
   const coverUrl = getAlbumCoverUrl(graphNodeProps.nodeId);
 
   const genres = selectors.genresForAlbum(graphNodeProps.nodeId);
 
-  const { variant } = nodeContext.data;
-
-  const addChildren = useSetAtom(forceGraphAddChildrenToNodeDefAtom);
-
-  const handleZoomClick = () => {
-    addChildren({
-      parentId: graphNodeProps.nodeId,
-      children: genres.map((id) => ({
-        id,
-        context: {
-          data: {
-            name: id,
-          },
-          type: "genre",
-        },
-      })),
-    });
-  };
+  const { variant } = contextWithBackup.data;
 
   return (
     <ForceGraphNode {...graphNodeProps}>
       <div className="flex min-h-20 w-32 min-w-32 flex-col items-center gap-2">
-        <div className="h-32">
+        <div className="h-32 max-h-32 overflow-hidden">
           <img
             className="h-auto w-full"
             src={coverUrl}
@@ -56,28 +56,45 @@ export function AlbumCardReact({ onClick, ...graphNodeProps }: AlbumCardProps) {
         <span className="text-center font-sans text-sm text-gray-300">
           {album ? album.release : "Unknown Album"}
         </span>
-        {variant !== "no-artist" && (
-          <p className="text-center font-sans text-xs text-gray-400 hover:underline">
+        {variant !== "albumsForArtist" && (
+          <p
+            className="text-center font-sans text-xs text-gray-400 hover:cursor-pointer hover:underline"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isViewActionsForKey(viewActions, "flowchart") && album) {
+                viewActions.actions.transitionToAlbumsForArtist({
+                  artistId: album?.["artist-mbid"],
+                });
+              }
+            }}
+          >
             {album ? album.artist : "Unknown Artist"}
           </p>
         )}
-        {variant === "no-artist" && (
-          <p className="text-center font-sans text-xs text-gray-400 hover:underline">
-            {album
-              ? album["release-date"].split("-")[0]
-              : "Unknown Release Date"}
-          </p>
+        {variant === "albumsForArtist" && (
+          <>
+            <p className="text-center font-sans text-xs text-gray-400">
+              {album
+                ? album["release-date"].split("-")[0]
+                : "Unknown Release Date"}
+            </p>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isViewActionsForKey(viewActions, "albumsForArtist")) {
+                  viewActions.actions.transitionToFlowchart({
+                    albumId: graphNodeProps.nodeId,
+                  });
+                }
+              }}
+              className="cursor-pointer rounded-full p-1 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
+            >
+              <ZoomIn width={16} height={16} />
+            </button>
+          </>
         )}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleZoomClick();
-          }}
-          className="cursor-pointer rounded-full p-1 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
-        >
-          <ZoomIn width={16} height={16} />
-        </button>
       </div>
     </ForceGraphNode>
   );
-}
+});
