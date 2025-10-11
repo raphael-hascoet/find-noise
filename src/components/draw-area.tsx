@@ -12,9 +12,18 @@ function DrawArea() {
         width: "100vw",
         maxWidth: "100vw",
         position: "relative",
+        padding: "16px",
       }}
     >
-      <ForceGraph width={1600} height={1200} showDebugGrid />
+      <div
+        style={{
+          height: "100%",
+          width: "100%",
+          position: "relative",
+        }}
+      >
+        <ForceGraph width={1600} height={1200} showDebugGrid />
+      </div>
     </div>
   );
 }

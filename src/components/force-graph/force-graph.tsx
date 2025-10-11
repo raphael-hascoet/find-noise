@@ -1,5 +1,6 @@
 import * as d3 from "d3";
 import { useAtomValue, useSetAtom } from "jotai";
+import { ZoomIn, ZoomOut } from "lucide-react";
 import { animate } from "motion";
 import { AnimatePresence, motion, useMotionValue } from "motion/react";
 import {
@@ -75,6 +76,8 @@ const ForceGraphContent = function ({
   showDebugGrid = false,
 }: ForceGraphProps) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const zoomContainerRef = useRef<HTMLDivElement>(null);
+  const d3ZoomRef = useRef<d3.ZoomBehavior<HTMLDivElement, unknown>>(null);
   const rendererRef = useRef<D3SvgRenderer | null>(null);
 
   const initForceGraphDimensions = useSetAtom(initForceGraphDimensionsAtom);
@@ -134,7 +137,7 @@ const ForceGraphContent = function ({
       .attr("stroke-width", 1.2);
   }, []);
 
-  const [transform, setTransform] = useState(d3.zoomIdentity.scale(0.7));
+  const [transform, setTransform] = useState(d3.zoomIdentity.scale(0.5));
 
   // Initialize dimensions for all nodes
   useEffect(() => {
@@ -143,84 +146,144 @@ const ForceGraphContent = function ({
     );
   }, [nodeDefs, initForceGraphDimensions]);
 
-  // useEffect(() => {
-  //   const svg = d3.select((svgRef as RefObject<SVGSVGElement>).current);
-  //   svg.call(
-  //     d3
-  //       .zoom<SVGSVGElement, unknown>()
-  //       .scaleExtent([0.2, 4])
-  //       .on("zoom", (e) => setTransform(e.transform)),
-  //   );
-  // }, []);
+  useEffect(() => {
+    const zoomRoot = d3.select(
+      (zoomContainerRef as RefObject<HTMLDivElement>).current,
+    );
+
+    const zoom = d3
+      .zoom<HTMLDivElement, unknown>()
+      .scaleExtent([0.5, 4])
+      .on("zoom", (e) => setTransform(e.transform));
+
+    d3ZoomRef.current = zoom;
+    zoomRoot.call(zoom);
+  }, []);
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        pointerEvents: "none",
-        transform: `scale(${transform.k})`,
-      }}
-    >
-      <svg
-        ref={svgRef}
-        width={width}
-        height={height}
-        style={{
-          position: "absolute",
-          inset: 0,
-          pointerEvents: "none",
-        }}
-      >
-        {showDebugGrid && (
-          <DebugGrid width={width} height={height} transform={transform} />
-        )}
-        <ForceGraphLinks
-          links={links}
-          transform={transform}
-          positions={positions}
-        />
-      </svg>
+    <>
+      <div style={{ width, height, overflow: "hidden", padding: "16px" }}>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
+            transform: `scale(${transform.k})`,
+            padding: "8px",
+            top: "0",
+            left: "0",
+          }}
+          ref={zoomContainerRef}
+        >
+          <svg
+            ref={svgRef}
+            width={width}
+            height={height}
+            style={{
+              position: "absolute",
+              inset: 0,
+              pointerEvents: "none",
+            }}
+          >
+            {showDebugGrid && (
+              <DebugGrid width={width} height={height} transform={transform} />
+            )}
+            <ForceGraphLinks
+              links={links}
+              transform={transform}
+              positions={positions}
+            />
+          </svg>
 
-      <AnimatePresence
-        mode="popLayout"
-        onExitComplete={() => setTransitionNodes(new Map())}
-      >
-        {Array.from(nodeDefs.entries()).map(([nodeId, n]) => {
-          const hasPosition = positions?.has(nodeId) ?? false;
-          const graphPos = positions?.get(nodeId);
+          <AnimatePresence
+            mode="popLayout"
+            onExitComplete={() => setTransitionNodes(new Map())}
+          >
+            {Array.from(nodeDefs.entries()).map(([nodeId, n]) => {
+              const hasPosition = positions?.has(nodeId) ?? false;
+              const graphPos = positions?.get(nodeId);
 
-          const screenPos = graphPos
-            ? {
-                left: graphPos.x + transform.x,
-                top: graphPos.y + transform.y,
+              const screenPos = graphPos
+                ? {
+                    left: graphPos.x + transform.x,
+                    top: graphPos.y + transform.y,
+                  }
+                : { left: 0, top: 0 };
+
+              if (!hasPosition) {
+                return (
+                  <div key={`shell-${nodeId}`} className="opacity-0">
+                    <NodeContent
+                      hasPosition={hasPosition}
+                      nodeDef={n}
+                      viewActions={viewActions}
+                    />
+                  </div>
+                );
               }
-            : { left: 0, top: 0 };
 
-          if (!hasPosition) {
-            return (
-              <div key={`shell-${nodeId}`} className="opacity-0">
-                <NodeContent
-                  hasPosition={hasPosition}
-                  nodeDef={n}
-                  viewActions={viewActions}
-                />
-              </div>
+              return (
+                <NodeMotion
+                  key={nodeId}
+                  left={screenPos.left}
+                  top={screenPos.top}
+                >
+                  <NodeContent
+                    hasPosition={hasPosition}
+                    nodeDef={n}
+                    viewActions={viewActions}
+                  />
+                </NodeMotion>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+      </div>
+      <div className="fixed right-2 bottom-2 flex gap-2 border-gray-800 bg-amber-900 p-2">
+        <button
+          className="cursor-pointer rounded-full bg-gray-800 p-2 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
+          onClick={() => {
+            const zoomRoot = d3.select(
+              (zoomContainerRef as RefObject<HTMLDivElement>).current,
             );
-          }
-
-          return (
-            <NodeMotion key={nodeId} left={screenPos.left} top={screenPos.top}>
-              <NodeContent
-                hasPosition={hasPosition}
-                nodeDef={n}
-                viewActions={viewActions}
-              />
-            </NodeMotion>
-          );
-        })}
-      </AnimatePresence>
-    </div>
+            zoomRoot
+              .transition()
+              .duration(200)
+              .call(
+                (
+                  d3ZoomRef as RefObject<
+                    d3.ZoomBehavior<HTMLDivElement, unknown>
+                  >
+                ).current.scaleBy,
+                1.2,
+              );
+          }}
+        >
+          <ZoomIn width={16} height={16} />
+        </button>
+        <button
+          className="cursor-pointer rounded-full bg-gray-800 p-2 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
+          onClick={() => {
+            const zoomRoot = d3.select(
+              (zoomContainerRef as RefObject<HTMLDivElement>).current,
+            );
+            zoomRoot
+              .transition()
+              .duration(200)
+              .call(
+                (
+                  d3ZoomRef as RefObject<
+                    d3.ZoomBehavior<HTMLDivElement, unknown>
+                  >
+                ).current.scaleBy,
+                1 / 1.2,
+              );
+          }}
+        >
+          <ZoomOut width={16} height={16} />
+        </button>
+      </div>
+    </>
   );
 };
 

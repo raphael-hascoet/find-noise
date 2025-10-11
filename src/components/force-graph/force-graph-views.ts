@@ -248,8 +248,11 @@ export const viewBuilders = {
         return positionMap;
       }
 
-      if (albumNode.children?.length === 0) {
+      console.log({ albumNode });
+
+      if (!albumNode.children?.length) {
         positionMap.set(albumMbid, { x: 0, y: 0 });
+        return positionMap;
       }
 
       let lastX = 0;
