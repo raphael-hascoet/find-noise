@@ -1,5 +1,5 @@
 import { useAtomValue } from "jotai";
-import { ZoomIn } from "lucide-react";
+import { GitGraph, ZoomIn } from "lucide-react";
 import { memo } from "react";
 import { getAlbumCoverUrl } from "../data/album-cover-urls";
 import { albumDataSelectorsAtom } from "../data/albums-pool-atoms";
@@ -38,8 +38,6 @@ export const AlbumCard = memo(function AlbumCard({
   const album = selectors.byMbid(graphNodeProps.nodeId);
   const coverUrl = getAlbumCoverUrl(graphNodeProps.nodeId);
 
-  const genres = selectors.genresForAlbum(graphNodeProps.nodeId);
-
   const { variant } = contextWithBackup.data;
 
   return (
@@ -70,6 +68,25 @@ export const AlbumCard = memo(function AlbumCard({
           >
             {album ? album.artist : "Unknown Artist"}
           </p>
+        )}
+        {variant === "flowchart" && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isViewActionsForKey(viewActions, "flowchart")) {
+                viewActions.actions.addRecommendationsToNode?.({
+                  albumMbid: graphNodeProps.nodeId,
+                  params: {
+                    topX: 5,
+                    opts: { excludeSameArtist: true },
+                  },
+                });
+              }
+            }}
+            className="cursor-pointer rounded-full p-1 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
+          >
+            <GitGraph width={16} height={16} />
+          </button>
         )}
         {variant === "albumsForArtist" && (
           <>

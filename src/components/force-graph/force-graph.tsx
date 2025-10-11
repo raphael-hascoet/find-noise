@@ -17,7 +17,6 @@ import { ArtistCard } from "../ArtistCard";
 import { GenreCardReact } from "../GenreCard";
 import { initForceGraphDimensionsAtom } from "./force-graph-dimensions";
 import {
-  forceGraphGetRootNodeDefAtom,
   type ForceGraphNodeDef,
   type ForceGraphNodeDefByType,
 } from "./force-graph-nodes-manager";
@@ -49,24 +48,17 @@ type ForceGraphProps = {
 export const ForceGraph = function (
   props: Omit<ForceGraphProps, "positions" | "nodeDefs">,
 ) {
-  const nodeDef = useAtomValue(forceGraphGetRootNodeDefAtom);
   const selectors = useAtomValue(albumDataSelectorsAtom);
   const setActiveView = useSetAtom(setActiveViewAtom);
   const nodeDefs = useAtomValue(calculatedNodeDefsAtom);
 
   // Set the view configuration - nodes are built automatically
   useEffect(() => {
-    if (!nodeDef || nodeDef.context.type !== "artist") return;
-
-    setActiveView({
-      key: "albumsForArtist",
-      data: {
-        artistId: nodeDef.id,
-      },
-    });
-  }, [nodeDef, selectors, setActiveView]);
-
-  if (!nodeDef || !nodeDefs) {
+    const firstArtist = selectors?.allArtistKeys?.()[0];
+    if (!firstArtist) return;
+    setActiveView({ key: "albumsForArtist", data: { artistId: firstArtist } });
+  }, [selectors, setActiveView]);
+  if (!nodeDefs) {
     return null;
   }
 
@@ -90,8 +82,10 @@ const ForceGraphContent = function ({
   // Create view actions atom with changeView callback
   const viewActionsAtom = useMemo(
     () =>
-      createViewActionsAtom(<K extends ViewKey>(key: K, data: ViewData<K>) => {
-        setActiveView({ key, data });
+      createViewActionsAtom({
+        changeView: <K extends ViewKey>(key: K, data: ViewData<K>) => {
+          setActiveView({ key, data });
+        },
       }),
     [setActiveView],
   );

@@ -1,4 +1,3 @@
-import { atom } from "jotai";
 import type { AlbumCardVariant } from "../AlbumCard";
 
 export type ForceGraphNodeDefBase = {
@@ -39,143 +38,64 @@ export type ForceGraphNodeDef = ForceGraphNodeDefBase & {
   context: ForceGraphNodeDefByType;
 };
 
-type ForceGraphNodeDefWithParent = Omit<ForceGraphNodeDef, "children"> & {
-  parentId: string | null;
-  children?: string[];
-};
+// Pure utilities for recursive trees (immutable)
+export function flattenNodeTreeToMap(
+  root: ForceGraphNodeDef,
+  map: Map<string, ForceGraphNodeDef> = new Map(),
+): Map<string, ForceGraphNodeDef> {
+  map.set(root.id, root);
+  root.children?.forEach((child) => flattenNodeTreeToMap(child, map));
+  return map;
+}
 
-const forceGraphDisplayedNodeDefsAtom = atom<
-  Map<string, ForceGraphNodeDefWithParent>
->(new Map());
-
-const forceGraphRootNodeDefIdAtom = atom<string | null>(null);
-
-export const forceGraphGetRootNodeDefAtom = atom((get) => {
-  const rootNodeId = get(forceGraphRootNodeDefIdAtom);
-
-  if (!rootNodeId) {
-    return null;
+export function addChildrenToNodeInTree(
+  root: ForceGraphNodeDef,
+  parentId: string,
+  newChildren: ForceGraphNodeDef[],
+): ForceGraphNodeDef {
+  if (root.id === parentId) {
+    return {
+      ...root,
+      children: [...(root.children || []), ...newChildren],
+    };
   }
-
-  return resolveNodeDefForDisplay({
-    nodeId: rootNodeId,
-    map: get(forceGraphDisplayedNodeDefsAtom),
-  });
-});
-
-export const forceGraphSetRootNodeDefAtom = atom(
-  null,
-  (_, set, update: ForceGraphNodeDef) => {
-    set(forceGraphRootNodeDefIdAtom, update.id);
-    if (update) {
-      const newDisplayedNodeDefs = new Map();
-      createDisplayNodeDefsRecursive({
-        node: update,
-        map: newDisplayedNodeDefs,
-        parentId: null,
-      });
-      set(forceGraphDisplayedNodeDefsAtom, newDisplayedNodeDefs);
-    }
-  },
-);
-
-export const forceGraphClearRootNodeDefAtom = atom(null, (_, set) => {
-  set(forceGraphRootNodeDefIdAtom, null);
-  set(forceGraphDisplayedNodeDefsAtom, new Map());
-});
-
-export const forceGraphAddChildrenToNodeDefAtom = atom(
-  null,
-  (get, set, update: { parentId: string; children: ForceGraphNodeDef[] }) => {
-    const { parentId, children } = update;
-    const displayedNodeDefs = new Map(get(forceGraphDisplayedNodeDefsAtom));
-
-    const parentNodeDef = displayedNodeDefs.get(parentId);
-
-    if (!parentNodeDef) {
-      console.warn("Parent node not found");
-      return;
-    }
-
-    children.forEach((child) => {
-      createDisplayNodeDefsRecursive({
-        node: child,
-        map: displayedNodeDefs,
-        parentId,
-      });
-    });
-
-    displayedNodeDefs.set(parentId, {
-      ...parentNodeDef,
-      children: [
-        ...(parentNodeDef?.children || []),
-        ...children.map((child) => child.id),
-      ],
-    });
-
-    console.log(displayedNodeDefs);
-
-    set(forceGraphDisplayedNodeDefsAtom, displayedNodeDefs);
-  },
-);
-
-const resolveNodeDefForDisplay = ({
-  nodeId,
-  map,
-}: {
-  nodeId: string;
-  map: Map<string, ForceGraphNodeDefWithParent>;
-}): ForceGraphNodeDef => {
-  const node = map.get(nodeId);
-  if (!node) {
-    throw new Error(`Node not found: ${nodeId}`);
-  }
+  if (!root.children || root.children.length === 0) return root;
   return {
-    ...node,
-    children: node.children?.map((childId) =>
-      resolveNodeDefForDisplay({ nodeId: childId, map }),
+    ...root,
+    children: root.children.map((c) =>
+      addChildrenToNodeInTree(c, parentId, newChildren),
     ),
   };
-};
+}
 
-const createDisplayNodeDefsRecursive = ({
-  node,
-  map,
-  parentId,
-}: {
-  node: ForceGraphNodeDef;
-  map: Map<string, ForceGraphNodeDefWithParent>;
-  parentId: string | null;
-}) => {
-  node.children?.forEach((child) =>
-    createDisplayNodeDefsRecursive({ node: child, map, parentId: node.id }),
-  );
-  map.set(node.id, {
-    ...node,
-    parentId,
-    children: node.children?.map((child) => child.id),
-  });
-};
-
-const deleteDisplayNodeDefsRecursive = ({
-  nodeId,
-  map,
-}: {
-  nodeId: string;
-  map: Map<string, ForceGraphNodeDefWithParent>;
-}) => {
-  const node = map.get(nodeId);
-  node?.children?.forEach((child) =>
-    deleteDisplayNodeDefsRecursive({ nodeId: child, map }),
-  );
-  if (node?.parentId) {
-    const parentNodeDef = map.get(node.parentId);
-    if (parentNodeDef) {
-      map.set(node.parentId, {
-        ...parentNodeDef,
-        children: parentNodeDef.children?.filter((id) => id !== nodeId),
-      });
-    }
+export function removeChildrenFromNodeInTree(
+  root: ForceGraphNodeDef,
+  parentId: string,
+  childIdsToRemove: string[],
+): ForceGraphNodeDef {
+  if (root.id === parentId) {
+    return {
+      ...root,
+      children: root.children?.filter((c) => !childIdsToRemove.includes(c.id)),
+    };
   }
-  map.delete(nodeId);
-};
+  if (!root.children || root.children.length === 0) return root;
+  return {
+    ...root,
+    children: root.children.map((c) =>
+      removeChildrenFromNodeInTree(c, parentId, childIdsToRemove),
+    ),
+  };
+}
+
+export function findNodeInTree(
+  root: ForceGraphNodeDef,
+  nodeId: string,
+): ForceGraphNodeDef | null {
+  if (root.id === nodeId) return root;
+  for (const c of root.children || []) {
+    const found = findNodeInTree(c, nodeId);
+    if (found) return found;
+  }
+  return null;
+}

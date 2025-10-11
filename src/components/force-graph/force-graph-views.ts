@@ -6,13 +6,22 @@ import {
   type Album,
 } from "../../data/albums-pool-atoms";
 import {
+  simpleRecommendAlbums,
+  type SimpleRecommendParams,
+} from "../../data/get-albums-recommendations";
+import {
   forceGraphAllDimensionsLoadedAtom,
   type ForceGraphDimensionsLoaded,
 } from "./force-graph-dimensions";
-import { type ForceGraphNodeDef } from "./force-graph-nodes-manager";
+import {
+  addChildrenToNodeInTree,
+  flattenNodeTreeToMap,
+  removeChildrenFromNodeInTree,
+  type ForceGraphNodeDef,
+} from "./force-graph-nodes-manager";
 
 // Album selectors type helper
-type AlbumSelectors = {
+export type AlbumSelectors = {
   byMbid: (mbid: string) => Album | undefined;
   byArtistMbid: (artistMbid: string) => Album[];
   byGenre: (genre: string) => Album[];
@@ -22,6 +31,7 @@ type AlbumSelectors = {
   allGenres: () => string[];
   allDescriptors: () => string[];
   randomN: (n: number) => Album[];
+  allAlbums: () => Album[];
 };
 
 type ViewKeyToDefinition = {
@@ -36,9 +46,24 @@ type ViewKeyToDefinition = {
   flowchart: {
     data: {
       albumMbid: string;
+      nodeTree?: ForceGraphNodeDef;
     };
     actions: {
       transitionToAlbumsForArtist: ({ artistId }: { artistId: string }) => void;
+      addRecommendationsToNode?: ({
+        albumMbid,
+        params,
+      }: {
+        albumMbid: string;
+        params: Omit<SimpleRecommendParams, "seed" | "all">;
+      }) => void;
+      removeChildrenFromNode?: ({
+        parentId,
+        childIds,
+      }: {
+        parentId: string;
+        childIds: string[];
+      }) => void;
     };
   };
 };
@@ -64,6 +89,7 @@ export type ViewBuilder<Key extends ViewKey> = {
     data: ViewData<Key>;
     selectors: AlbumSelectors;
     dimensions: Map<string, ForceGraphDimensionsLoaded>;
+    nodeDefs: Map<string, ForceGraphNodeDef>;
   }) => Map<string, { x: number; y: number }>;
 
   buildActions: (params: {
@@ -183,13 +209,15 @@ export const viewBuilders = {
   },
   flowchart: {
     buildNodes: ({ data, selectors }) => {
-      const { albumMbid } = data;
-
+      const { albumMbid, nodeTree } = data;
+      // If we already have a tree in state, flatten and return
+      if (nodeTree) {
+        return flattenNodeTreeToMap(nodeTree);
+      }
+      // Otherwise create initial root-only tree
       const album = selectors.byMbid(albumMbid);
       if (!album) return new Map();
-
-      const nodeMap = new Map<string, ForceGraphNodeDef>();
-      nodeMap.set(albumMbid, {
+      const root: ForceGraphNodeDef = {
         id: albumMbid,
         context: {
           type: "album",
@@ -199,25 +227,113 @@ export const viewBuilders = {
             variant: "flowchart",
           },
         },
-      });
-
-      return nodeMap;
+      };
+      return flattenNodeTreeToMap(root);
     },
 
-    buildNodePositions: ({ data, dimensions }) => {
+    buildNodePositions: ({ data, dimensions, nodeDefs }) => {
       const { albumMbid } = data;
       const positionMap = new Map<string, { x: number; y: number }>();
 
-      // Center the album at (0, 0)
-      positionMap.set(albumMbid, { x: 0, y: 0 });
+      const albumNode = nodeDefs.get(albumMbid);
+
+      const albumDimensions = dimensions.get(albumMbid);
+
+      if (!albumNode) {
+        console.warn(`No node found for album MBID: ${albumMbid}`);
+        return positionMap;
+      }
+      if (!albumDimensions) {
+        console.warn(`No dimensions found for album MBID: ${albumMbid}`);
+        return positionMap;
+      }
+
+      if (albumNode.children?.length === 0) {
+        positionMap.set(albumMbid, { x: 0, y: 0 });
+      }
+
+      let lastX = 0;
+
+      let y = (dimensions.get(albumMbid)?.height || 0) + 20;
+      albumNode.children?.forEach(({ id }) => {
+        const childDimensions = dimensions.get(id);
+        if (childDimensions) {
+          positionMap.set(id, {
+            x: lastX,
+            y,
+          });
+          lastX += childDimensions.width + 20; // Add width + margin
+        }
+      });
+
+      const centeredPosition = (lastX - 20) / 2 - albumDimensions.width / 2; // Remove last margin
+
+      positionMap.set(albumMbid, { x: centeredPosition, y: 0 });
 
       return positionMap;
     },
 
-    buildActions: ({ changeView }) => {
+    buildActions: ({ changeView, selectors, data }) => {
       return {
         transitionToAlbumsForArtist: ({ artistId }: { artistId: string }) => {
+          console.log("changeView: albumsForArtist", { artistId });
           changeView("albumsForArtist", { artistId });
+        },
+        addRecommendationsToNode: ({ albumMbid, params }) => {
+          const seed = selectors.byMbid(albumMbid);
+          if (!seed) return;
+
+          const albums = selectors.allAlbums();
+
+          const recommendations = simpleRecommendAlbums({
+            ...params,
+            seed,
+            all: albums,
+          });
+          const currentRoot: ForceGraphNodeDef =
+            data.nodeTree ??
+            ({
+              id: data.albumMbid,
+              context: {
+                type: "album",
+                data: {
+                  artist: seed["artist-mbid"],
+                  title: seed.release,
+                  variant: "flowchart",
+                },
+              },
+            } as ForceGraphNodeDef);
+
+          const newChildren: ForceGraphNodeDef[] = recommendations.map(
+            (rec) =>
+              ({
+                id: rec.album.mbid,
+                context: {
+                  type: "album",
+                  data: {
+                    artist: rec.album["artist-mbid"],
+                    title: rec.album.release,
+                    variant: "flowchart",
+                  },
+                },
+              }) as ForceGraphNodeDef,
+          );
+
+          const updated = addChildrenToNodeInTree(
+            currentRoot,
+            albumMbid,
+            newChildren,
+          );
+          changeView("flowchart", { ...data, nodeTree: updated });
+        },
+        removeChildrenFromNode: ({ parentId, childIds }) => {
+          if (!data.nodeTree) return;
+          const updated = removeChildrenFromNodeInTree(
+            data.nodeTree,
+            parentId,
+            childIds,
+          );
+          changeView("flowchart", { ...data, nodeTree: updated });
         },
       };
     },
@@ -263,8 +379,9 @@ export const calculatedNodePositionsAtom = atom((get) => {
   const selectors = get(albumDataSelectorsAtom);
   const dimensions = get(forceGraphAllDimensionsLoadedAtom);
   const viewConfig = get(activeViewConfigAtom);
+  const nodeDefs = get(calculatedNodeDefsAtom);
 
-  if (!dimensions || !viewConfig) return null;
+  if (!dimensions || !viewConfig || !nodeDefs) return null;
 
   const builder = viewBuilders[viewConfig.key];
   if (!builder) return null;
@@ -273,6 +390,7 @@ export const calculatedNodePositionsAtom = atom((get) => {
     data: viewConfig.data as any,
     selectors,
     dimensions,
+    nodeDefs,
   });
 });
 
@@ -291,9 +409,11 @@ export const isViewActionsForKey = <K extends ViewKey>(
 };
 
 // Factory to create view actions with proper changeView callback
-export const createViewActionsAtom = (
-  changeView: <K extends ViewKey>(key: K, data: ViewData<K>) => void,
-) => {
+export const createViewActionsAtom = ({
+  changeView,
+}: {
+  changeView: <K extends ViewKey>(key: K, data: ViewData<K>) => void;
+}) => {
   return atom((get) => {
     const viewConfig = get(activeViewConfigAtom);
     if (!viewConfig) return null;

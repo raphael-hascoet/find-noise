@@ -1,5 +1,6 @@
 import { atom } from "jotai";
 import { z } from "zod";
+import type { AlbumSelectors } from "../components/force-graph/force-graph-views";
 
 export const AlbumSchema = z.object({
   id: z.string(),
@@ -105,7 +106,7 @@ export const initAlbumsFromUrlAtom = atom(
 );
 
 // Grouped selectors (read-only)
-export const albumDataSelectorsAtom = atom((get) => {
+export const albumDataSelectorsAtom = atom((get): AlbumSelectors => {
   const byId = get(byMbidAtom);
   const ref = get(refMapsAtom);
 
@@ -113,6 +114,7 @@ export const albumDataSelectorsAtom = atom((get) => {
     ids.map((id) => byId.get(id)).filter(Boolean) as Album[];
 
   return {
+    allAlbums: () => Array.from(byId.values()),
     byMbid: (mbid: string) => byId.get(mbid),
     byArtistMbid: (artistMbid: string) =>
       mapIds(ref.artists.get(artistMbid) ?? []),
