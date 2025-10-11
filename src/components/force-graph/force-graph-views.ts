@@ -254,7 +254,7 @@ export const viewBuilders = {
 
       let lastX = 0;
 
-      let y = (dimensions.get(albumMbid)?.height || 0) + 20;
+      let y = (dimensions.get(albumMbid)?.height || 0) + 200;
       albumNode.children?.forEach(({ id }) => {
         const childDimensions = dimensions.get(id);
         if (childDimensions) {
@@ -456,4 +456,26 @@ export const transitioningNodesFamily = atomFamily((id: string) => {
     const transitioningNodes = get(transitioningNodesAtom);
     return transitioningNodes?.get(id);
   });
+});
+
+// Calculated links - extracts parent-child relationships from node tree
+export const calculatedLinksAtom = atom((get) => {
+  const nodeDefs = get(calculatedNodeDefsAtom);
+  const viewConfig = get(activeViewConfigReadOnlyAtom);
+
+  // Only show links in flowchart view
+  if (viewConfig?.key !== "flowchart") return [];
+
+  const links: Array<{ source: string; targets: string[] }> = [];
+
+  nodeDefs?.forEach((node) => {
+    if (node.children && node.children.length > 0) {
+      links.push({
+        source: node.id,
+        targets: node.children.map((child) => child.id),
+      });
+    }
+  });
+
+  return links;
 });

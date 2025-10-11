@@ -16,12 +16,14 @@ import { AlbumCard } from "../AlbumCard";
 import { ArtistCard } from "../ArtistCard";
 import { GenreCardReact } from "../GenreCard";
 import { initForceGraphDimensionsAtom } from "./force-graph-dimensions";
+import { ForceGraphLinks } from "./force-graph-links";
 import {
   type ForceGraphNodeDef,
   type ForceGraphNodeDefByType,
 } from "./force-graph-nodes-manager";
 import {
   activeViewConfigReadOnlyAtom,
+  calculatedLinksAtom,
   calculatedNodeDefsAtom,
   calculatedNodePositionsAtom,
   createViewActionsAtom,
@@ -43,6 +45,7 @@ type ForceGraphProps = {
   width?: number;
   height?: number;
   nodeDefs: Map<string, ForceGraphNodeDef>;
+  showDebugGrid?: boolean;
 };
 
 export const ForceGraph = function (
@@ -69,12 +72,14 @@ const ForceGraphContent = function ({
   nodeDefs,
   width = 800,
   height = 600,
+  showDebugGrid = false,
 }: ForceGraphProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const rendererRef = useRef<D3SvgRenderer | null>(null);
 
   const initForceGraphDimensions = useSetAtom(initForceGraphDimensionsAtom);
   const positions = useAtomValue(calculatedNodePositionsAtom);
+  const links = useAtomValue(calculatedLinksAtom);
   const setActiveView = useSetAtom(setActiveViewAtom);
   const activeViewConfig = useAtomValue(activeViewConfigReadOnlyAtom);
   const setTransitionNodes = useSetAtom(transitioningNodesAtom);
@@ -125,11 +130,11 @@ const ForceGraphContent = function ({
       .attr("y1", (d) => d.y1)
       .attr("x2", (d) => d.x2)
       .attr("y2", (d) => d.y2)
-      .attr("stroke", "#fff")
+      .attr("stroke", "#999")
       .attr("stroke-width", 1.2);
   }, []);
 
-  const [transform, setTransform] = useState(d3.zoomIdentity.scale(0.5));
+  const [transform, setTransform] = useState(d3.zoomIdentity.scale(0.7));
 
   // Initialize dimensions for all nodes
   useEffect(() => {
@@ -149,72 +154,73 @@ const ForceGraphContent = function ({
   // }, []);
 
   return (
-    <>
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        pointerEvents: "none",
+        transform: `scale(${transform.k})`,
+      }}
+    >
       <svg
         ref={svgRef}
         width={width}
         height={height}
-        // style={{ border: "1px solid #333" }}
-      >
-        {/* <ForceGraphLinks
-          links={simLinks}
-          transform={transform}
-          positions={positions}
-        /> */}
-      </svg>
-
-      <div
         style={{
           position: "absolute",
           inset: 0,
           pointerEvents: "none",
-          transform: `scale(${transform.k})`,
         }}
       >
-        <AnimatePresence
-          mode="popLayout"
-          onExitComplete={() => setTransitionNodes(new Map())}
-        >
-          {Array.from(nodeDefs.entries()).map(([nodeId, n]) => {
-            const hasPosition = positions?.has(nodeId) ?? false;
-            const graphPos = positions?.get(nodeId);
+        {showDebugGrid && (
+          <DebugGrid width={width} height={height} transform={transform} />
+        )}
+        <ForceGraphLinks
+          links={links}
+          transform={transform}
+          positions={positions}
+        />
+      </svg>
 
-            const screenPos = graphPos
-              ? {
-                  left: graphPos.x + transform.x,
-                  top: graphPos.y + transform.y,
-                }
-              : { left: 0, top: 0 };
+      <AnimatePresence
+        mode="popLayout"
+        onExitComplete={() => setTransitionNodes(new Map())}
+      >
+        {Array.from(nodeDefs.entries()).map(([nodeId, n]) => {
+          const hasPosition = positions?.has(nodeId) ?? false;
+          const graphPos = positions?.get(nodeId);
 
-            if (!hasPosition) {
-              return (
-                <div key={`shell-${nodeId}`} className="opacity-0">
-                  <NodeContent
-                    hasPosition={hasPosition}
-                    nodeDef={n}
-                    viewActions={viewActions}
-                  />
-                </div>
-              );
-            }
+          const screenPos = graphPos
+            ? {
+                left: graphPos.x + transform.x,
+                top: graphPos.y + transform.y,
+              }
+            : { left: 0, top: 0 };
 
+          if (!hasPosition) {
             return (
-              <NodeMotion
-                key={nodeId}
-                left={screenPos.left}
-                top={screenPos.top}
-              >
+              <div key={`shell-${nodeId}`} className="opacity-0">
                 <NodeContent
                   hasPosition={hasPosition}
                   nodeDef={n}
                   viewActions={viewActions}
                 />
-              </NodeMotion>
+              </div>
             );
-          })}
-        </AnimatePresence>
-      </div>
-    </>
+          }
+
+          return (
+            <NodeMotion key={nodeId} left={screenPos.left} top={screenPos.top}>
+              <NodeContent
+                hasPosition={hasPosition}
+                nodeDef={n}
+                viewActions={viewActions}
+              />
+            </NodeMotion>
+          );
+        })}
+      </AnimatePresence>
+    </div>
   );
 };
 
@@ -247,6 +253,62 @@ const NodeContent = ({
       positioned={hasPosition}
     />
   ) : null;
+};
+
+const DebugGrid = ({
+  width,
+  height,
+  transform,
+  gridSize = 100,
+}: {
+  width: number;
+  height: number;
+  transform: d3.ZoomTransform;
+  gridSize?: number;
+}) => {
+  const lines: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
+
+  // Calculate the visible range in graph coordinates (before transform)
+  const startX = Math.floor(-transform.x / gridSize) * gridSize;
+  const endX = Math.ceil((width - transform.x) / gridSize) * gridSize;
+  const startY = Math.floor(-transform.y / gridSize) * gridSize;
+  const endY = Math.ceil((height - transform.y) / gridSize) * gridSize;
+
+  // Vertical lines - at every gridSize in graph space
+  for (let x = startX; x <= endX; x += gridSize) {
+    lines.push({
+      x1: x + transform.x,
+      y1: startY + transform.y,
+      x2: x + transform.x,
+      y2: endY + transform.y,
+    });
+  }
+
+  // Horizontal lines - at every gridSize in graph space
+  for (let y = startY; y <= endY; y += gridSize) {
+    lines.push({
+      x1: startX + transform.x,
+      y1: y + transform.y,
+      x2: endX + transform.x,
+      y2: y + transform.y,
+    });
+  }
+
+  return (
+    <g>
+      {lines.map((line, i) => (
+        <line
+          key={i}
+          x1={line.x1}
+          y1={line.y1}
+          x2={line.x2}
+          y2={line.y2}
+          stroke="rgba(255, 255, 255, 0.2)"
+          strokeWidth={1}
+        />
+      ))}
+    </g>
+  );
 };
 
 function NodeMotion({
