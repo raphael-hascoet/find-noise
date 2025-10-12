@@ -13,6 +13,7 @@ import {
   forceGraphAllDimensionsLoadedAtom,
   type ForceGraphDimensionsLoaded,
 } from "./force-graph-dimensions";
+import type { Position } from "./force-graph-links";
 import {
   addChildrenToNodeInTree,
   flattenNodeTreeToMap,
@@ -232,6 +233,9 @@ export const viewBuilders = {
     },
 
     buildNodePositions: ({ data, dimensions, nodeDefs }) => {
+      const MARGIN_X_NODES = 20;
+      const MARGIN_Y_NODES = 200;
+
       const { albumMbid } = data;
       const positionMap = new Map<string, { x: number; y: number }>();
 
@@ -255,23 +259,114 @@ export const viewBuilders = {
         return positionMap;
       }
 
-      let lastX = 0;
-
-      let y = (dimensions.get(albumMbid)?.height || 0) + 200;
-      albumNode.children?.forEach(({ id }) => {
-        const childDimensions = dimensions.get(id);
-        if (childDimensions) {
-          positionMap.set(id, {
-            x: lastX,
-            y,
-          });
-          lastX += childDimensions.width + 20; // Add width + margin
+      const widthRequiredPerNode = new Map<string, number>();
+      const heightPerDepth: number[] = [];
+      const handleChildrenWidthReqs = ({
+        node,
+        depth = 0,
+      }: {
+        node: ForceGraphNodeDef;
+        depth?: number;
+      }): {
+        widthRequired: number;
+      } => {
+        if (!node.children?.length) {
+          const extremityWidthRequired = dimensions.get(node.id)?.width ?? 0;
+          widthRequiredPerNode.set(node.id, extremityWidthRequired);
+          return { widthRequired: extremityWidthRequired };
         }
+
+        heightPerDepth[depth] = Math.max(
+          heightPerDepth[depth] ?? 0,
+          dimensions.get(node.id)?.height ?? 0,
+        );
+
+        let widthRequired = 0;
+        node.children.forEach((child) => {
+          const { widthRequired: childWidthRequired } = handleChildrenWidthReqs(
+            { node: child, depth: depth + 1 },
+          );
+          widthRequired += childWidthRequired;
+        });
+
+        widthRequired += MARGIN_X_NODES * (node.children.length - 1);
+
+        widthRequiredPerNode.set(node.id, widthRequired);
+
+        return { widthRequired };
+      };
+
+      handleChildrenWidthReqs({
+        node: albumNode,
       });
 
-      const centeredPosition = (lastX - 20) / 2 - albumDimensions.width / 2; // Remove last margin
+      let yForDepth: number[] = [0];
 
-      positionMap.set(albumMbid, { x: centeredPosition, y: 0 });
+      heightPerDepth.forEach((heightForDepth, depth) => {
+        yForDepth[depth + 1] =
+          yForDepth[depth] + heightForDepth + MARGIN_Y_NODES;
+      });
+      const handlePositionsForNodes = ({
+        node,
+        originPos = { x: 0, y: 0 },
+        depth = 0,
+      }: {
+        node: ForceGraphNodeDef;
+        originPos?: Position;
+        depth?: number;
+      }) => {
+        if (!node.children?.length) {
+          positionMap.set(node.id, originPos);
+          return;
+        }
+
+        const childrenY = yForDepth[depth + 1] ?? 0;
+
+        let nextX = originPos.x;
+
+        node.children?.forEach((child) => {
+          const childOriginPos = {
+            x: nextX,
+            y: childrenY,
+          };
+
+          handlePositionsForNodes({
+            node: child,
+            originPos: childOriginPos,
+            depth: depth + 1,
+          });
+
+          nextX += (widthRequiredPerNode.get(child.id) ?? 0) + MARGIN_X_NODES;
+        });
+
+        let centeredPosition: number;
+
+        if (node.children.length % 2 !== 0) {
+          const idx = Math.floor((node.children.length + 1) / 2 - 1);
+
+          centeredPosition = positionMap.get(node.children[idx].id)?.x ?? 0;
+        } else {
+          const idx1 = Math.floor(node.children.length / 2);
+          const idx2 = idx1 + 1;
+
+          const width1 = dimensions.get(node.children[idx1].id)?.width ?? 0;
+          const width2 = dimensions.get(node.children[idx2].id)?.width ?? 0;
+
+          const pos1 = positionMap.get(node.children[idx1].id)?.x ?? 0;
+          const pos2 = positionMap.get(node.children[idx2].id)?.x ?? 0;
+
+          const center1 = pos1 + width1 / 2;
+          const center2 = pos2 + width2 / 2;
+
+          centeredPosition = (center1 + center2) / 2;
+        }
+        positionMap.set(node.id, {
+          x: centeredPosition,
+          y: yForDepth[depth] ?? 0,
+        });
+      };
+
+      handlePositionsForNodes({ node: albumNode });
 
       return positionMap;
     },
@@ -286,12 +381,19 @@ export const viewBuilders = {
           const seed = selectors.byMbid(albumMbid);
           if (!seed) return;
 
+          let existingIds: string[] | undefined = undefined;
+          if (data.nodeTree) {
+            const flattenedTree = flattenNodeTreeToMap(data.nodeTree);
+            existingIds = Array.from(flattenedTree.keys());
+          }
+
           const albums = selectors.allAlbums();
 
           const recommendations = simpleRecommendAlbums({
             ...params,
             seed,
             all: albums,
+            excludedIds: existingIds,
           });
           const currentRoot: ForceGraphNodeDef =
             data.nodeTree ??

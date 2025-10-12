@@ -49,6 +49,7 @@ export type SimpleRecommendParams = {
   seed: Album;
   all: Album[];
   topX: number;
+  excludedIds?: string[];
   weights?: SimpleWeights;
   opts?: {
     requireAnyGenreOverlap?: boolean; // quick filter to keep only genre-related candidates
@@ -60,6 +61,7 @@ export function simpleRecommendAlbums({
   seed,
   all,
   topX,
+  excludedIds,
   weights = {
     genrePP: 1.0,
     genrePS: 0.6,
@@ -78,7 +80,9 @@ export function simpleRecommendAlbums({
   const seedPrimSet = new Set(seedPrim);
   const seedSecSet = new Set(seedSec);
 
-  let pool = (all ?? []).filter((a) => a && a.mbid !== seed.mbid);
+  let pool = (all ?? []).filter(
+    (a) => a && a.mbid !== seed.mbid && !excludedIds?.includes(a.mbid),
+  );
 
   if (opts?.excludeSameArtist) {
     pool = pool.filter((a) => a["artist-mbid"] !== seed["artist-mbid"]);

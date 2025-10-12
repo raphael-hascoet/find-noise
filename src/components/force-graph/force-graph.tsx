@@ -153,7 +153,7 @@ const ForceGraphContent = function ({
 
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.5, 4])
+      .scaleExtent([0.1, 4])
       .on("zoom", (e) => setTransform(e.transform));
 
     d3ZoomRef.current = zoom;
