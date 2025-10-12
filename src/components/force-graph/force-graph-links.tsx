@@ -37,11 +37,9 @@ type LinkEndpoints = {
 
 export const ForceGraphLinks = ({
   links,
-  transform,
   positions,
 }: {
   links: Link[];
-  transform: d3.ZoomTransform;
   positions: Map<string, { x: number; y: number }> | null;
 }) => {
   const dimensions = useAtomValue(forceGraphAllDimensionsLoadedAtom);
@@ -64,8 +62,8 @@ export const ForceGraphLinks = ({
         const source: LinkExtremity = {
           nodeId: link.source,
           position: {
-            x: sourcePos.x + transform.x,
-            y: sourcePos.y + transform.y,
+            x: sourcePos.x,
+            y: sourcePos.y,
           },
           dimensions: {
             width: sourceDim.width,
@@ -90,8 +88,8 @@ export const ForceGraphLinks = ({
             return {
               nodeId,
               position: {
-                x: pos.x + transform.x,
-                y: pos.y + transform.y,
+                x: pos.x,
+                y: pos.y,
               },
               dimensions: {
                 height: dim.height,
