@@ -15,7 +15,7 @@ export const ArtistCard = memo(function ArtistCard({
   const transitioningNode = useAtomValue(
     transitioningNodesFamily(graphNodeProps.nodeId),
   );
-  const contextWithBackup = context ?? transitioningNode?.context;
+  const contextWithBackup = context ?? transitioningNode?.nodeDef.context;
 
   return (
     <ForceGraphNode {...graphNodeProps}>

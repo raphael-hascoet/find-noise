@@ -31,7 +31,7 @@ export const AlbumCard = memo(function AlbumCard({
   );
   const selectors = useAtomValue(albumDataSelectorsAtom);
 
-  const contextWithBackup = context ?? transitioningNode?.context;
+  const contextWithBackup = context ?? transitioningNode?.nodeDef.context;
 
   if (!contextWithBackup || contextWithBackup.type !== "album") return null;
 

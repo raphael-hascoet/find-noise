@@ -1,6 +1,6 @@
 import { useSetAtom } from "jotai";
 import { useLayoutEffect, useRef, type PropsWithChildren } from "react";
-import { registerForceGraphDimensionsAtom } from "./force-graph/force-graph-dimensions";
+import { registerNodeDimensionsAtom } from "./force-graph/force-graph-dimensions";
 
 export type ForceGraphNodeBase = {
   nodeId: string;
@@ -12,16 +12,13 @@ type ForceGraphNodeProps = ForceGraphNodeBase & PropsWithChildren;
 export const ForceGraphNode = ({ nodeId, children }: ForceGraphNodeProps) => {
   const ref = useRef<HTMLDivElement>(null);
 
-  const registerForceGraphDimensions = useSetAtom(
-    registerForceGraphDimensionsAtom,
-  );
+  const registerNodeDimensions = useSetAtom(registerNodeDimensionsAtom);
 
   useLayoutEffect(() => {
     if (!ref.current) return;
 
-    registerForceGraphDimensions({
+    registerNodeDimensions({
       id: nodeId,
-      loaded: true,
       width: ref.current.offsetWidth,
       height: ref.current.offsetHeight,
     });

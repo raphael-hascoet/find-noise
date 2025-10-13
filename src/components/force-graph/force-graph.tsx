@@ -16,20 +16,18 @@ import { albumDataSelectorsAtom } from "../../data/albums-pool-atoms";
 import { AlbumCard } from "../AlbumCard";
 import { ArtistCard } from "../ArtistCard";
 import { GenreCardReact } from "../GenreCard";
-import { initForceGraphDimensionsAtom } from "./force-graph-dimensions";
 import { ForceGraphLinks } from "./force-graph-links";
 import {
   type ForceGraphNodeDef,
   type ForceGraphNodeDefByType,
 } from "./force-graph-nodes-manager";
 import {
-  activeViewConfigReadOnlyAtom,
   calculatedLinksAtom,
-  calculatedNodeDefsAtom,
-  calculatedNodePositionsAtom,
   createViewActionsAtom,
+  nodePositioningStateAtom,
   setActiveViewAtom,
   transitioningNodesAtom,
+  type NodePositioningState,
   type ViewActionsAtomOutput,
   type ViewData,
   type ViewKey,
@@ -42,19 +40,18 @@ export type ForceGraphNode = {
 };
 
 type ForceGraphProps = {
-  // positions: Map<string, { x: number; y: number }>;
+  positioningState: NodePositioningState;
   width?: number;
   height?: number;
-  nodeDefs: Map<string, ForceGraphNodeDef>;
   showDebugGrid?: boolean;
 };
 
 export const ForceGraph = function (
-  props: Omit<ForceGraphProps, "positions" | "nodeDefs">,
+  props: Omit<ForceGraphProps, "positioningState">,
 ) {
   const selectors = useAtomValue(albumDataSelectorsAtom);
   const setActiveView = useSetAtom(setActiveViewAtom);
-  const nodeDefs = useAtomValue(calculatedNodeDefsAtom);
+  const positioningState = useAtomValue(nodePositioningStateAtom);
 
   // Set the view configuration - nodes are built automatically
   useEffect(() => {
@@ -62,15 +59,16 @@ export const ForceGraph = function (
     if (!firstArtist) return;
     setActiveView({ key: "albumsForArtist", data: { artistId: firstArtist } });
   }, [selectors, setActiveView]);
-  if (!nodeDefs) {
+
+  if (positioningState.state === "init") {
     return null;
   }
 
-  return <ForceGraphContent nodeDefs={nodeDefs} {...props} />;
+  return <ForceGraphContent positioningState={positioningState} {...props} />;
 };
 
 const ForceGraphContent = function ({
-  nodeDefs,
+  positioningState,
   width = 800,
   height = 600,
   showDebugGrid = false,
@@ -79,11 +77,10 @@ const ForceGraphContent = function ({
   const d3ZoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown>>(null);
   const rendererRef = useRef<D3SvgRenderer | null>(null);
 
-  const initForceGraphDimensions = useSetAtom(initForceGraphDimensionsAtom);
-  const positions = useAtomValue(calculatedNodePositionsAtom);
   const links = useAtomValue(calculatedLinksAtom);
+
+  // const initForceGraphDimensions = useSetAtom(initForceGraphDimensionsAtom);
   const setActiveView = useSetAtom(setActiveViewAtom);
-  const activeViewConfig = useAtomValue(activeViewConfigReadOnlyAtom);
   const setTransitionNodes = useSetAtom(transitioningNodesAtom);
 
   // Create view actions atom with changeView callback
@@ -141,13 +138,6 @@ const ForceGraphContent = function ({
     d3.zoomIdentity.translate(width * 0.2, height * 0.15).scale(0.5),
   );
 
-  // Initialize dimensions for all nodes
-  useEffect(() => {
-    initForceGraphDimensions(
-      Array.from(nodeDefs.keys()).map((id) => ({ id, loaded: false })),
-    );
-  }, [nodeDefs, initForceGraphDimensions]);
-
   useEffect(() => {
     const zoomRoot = d3.select((svgRef as RefObject<SVGSVGElement>).current);
 
@@ -166,6 +156,15 @@ const ForceGraphContent = function ({
     zoomRoot.call(zoom.transform, initialTransform);
   }, []);
 
+  console.log({ positioningState });
+
+  const visiblePositionedNodes =
+    positioningState.state === "ready"
+      ? positioningState.positionedNodes
+      : positioningState.state === "in-progress"
+        ? (positioningState.transitionNodes ?? null)
+        : null;
+
   return (
     <>
       <svg
@@ -181,11 +180,16 @@ const ForceGraphContent = function ({
         {showDebugGrid && (
           <DebugGrid width={width} height={height} transform={transform} />
         )}
-        <g
-          transform={`translate(${transform.x}, ${transform.y}) scale(${transform.k})`}
-        >
-          <ForceGraphLinks links={links} positions={positions} />
-        </g>
+        {visiblePositionedNodes && (
+          <g
+            transform={`translate(${transform.x}, ${transform.y}) scale(${transform.k})`}
+          >
+            <ForceGraphLinks
+              links={links}
+              positionedNodes={visiblePositionedNodes}
+            />
+          </g>
+        )}
       </svg>
       <div
         style={{
@@ -203,43 +207,35 @@ const ForceGraphContent = function ({
           mode="popLayout"
           onExitComplete={() => setTransitionNodes(new Map())}
         >
-          {Array.from(nodeDefs.entries()).map(([nodeId, n]) => {
-            const hasPosition = positions?.has(nodeId) ?? false;
-            const graphPos = positions?.get(nodeId);
-
-            const screenPos = graphPos
-              ? {
-                  left: graphPos.x,
-                  top: graphPos.y,
-                }
-              : { left: 0, top: 0 };
-
-            if (!hasPosition) {
-              return (
-                <div key={`shell-${nodeId}`} className="opacity-0">
-                  <NodeContent
-                    hasPosition={hasPosition}
-                    nodeDef={n}
-                    viewActions={viewActions}
-                  />
-                </div>
-              );
-            }
-
-            return (
-              <NodeMotion
-                key={nodeId}
-                left={screenPos.left}
-                top={screenPos.top}
-              >
+          {positioningState.state === "in-progress" &&
+            Array.from(positioningState.targetNodeDefs).map(([id, nodeDef]) => (
+              <div key={`shell-${id}`} className="opacity-0">
                 <NodeContent
-                  hasPosition={hasPosition}
-                  nodeDef={n}
+                  hasPosition={false}
+                  nodeDef={nodeDef}
                   viewActions={viewActions}
                 />
-              </NodeMotion>
-            );
-          })}
+              </div>
+            ))}
+          {visiblePositionedNodes &&
+            Array.from(visiblePositionedNodes.entries()).map(
+              ([nodeId, node]) => {
+                return (
+                  <NodeMotion
+                    key={nodeId}
+                    left={node.position.x}
+                    top={node.position.y}
+                    nodeId={nodeId}
+                  >
+                    <NodeContent
+                      hasPosition={true}
+                      nodeDef={node.nodeDef}
+                      viewActions={viewActions}
+                    />
+                  </NodeMotion>
+                );
+              },
+            )}
         </AnimatePresence>
       </div>
       <div className="fixed right-2 bottom-2 flex gap-2 border-gray-800 bg-amber-900 p-2">
@@ -381,17 +377,23 @@ function NodeMotion({
   left,
   top,
   children,
+  nodeId,
 }: {
   left: number;
   top: number;
   children: React.ReactNode;
+  nodeId: string;
 }) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const prev = useRef<{ left: number; top: number } | null>(null);
 
+  if (nodeId === "22d4ddbb-0161-4754-a8d0-5e0bd0d45f61") {
+    console.log({ left, top, children });
+  }
   useLayoutEffect(() => {
     if (prev.current) {
+      console.log({ prev: prev.current });
       const dx = prev.current.left - left;
       const dy = prev.current.top - top;
       x.set(dx);

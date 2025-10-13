@@ -1,7 +1,7 @@
 import { atom, useAtomValue } from "jotai";
 import { animate, motion, useMotionValue } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { forceGraphAllDimensionsLoadedAtom } from "./force-graph-dimensions";
+import type { PositionedNode } from "./force-graph-views";
 
 type Link = {
   source: string;
@@ -11,15 +11,6 @@ type Link = {
 export type Position = {
   x: number;
   y: number;
-};
-
-type LinkExtremity = {
-  nodeId: string;
-  position: Position;
-  dimensions: {
-    width: number;
-    height: number;
-  };
 };
 
 type LinkLineDef = {
@@ -37,81 +28,49 @@ type LinkEndpoints = {
 
 export const ForceGraphLinks = ({
   links,
-  positions,
+  positionedNodes,
 }: {
   links: Link[];
-  positions: Map<string, { x: number; y: number }> | null;
+  positionedNodes: Map<string, PositionedNode>;
 }) => {
-  const dimensions = useAtomValue(forceGraphAllDimensionsLoadedAtom);
-
-  if (!positions || dimensions.size === 0) return null;
+  if (!positionedNodes.size) return null;
 
   return (
     <>
       {links.map((link) => {
-        const sourcePos = positions.get(link.source);
+        const sourceNode = positionedNodes.get(link.source);
 
-        const sourceDim = dimensions.get(link.source);
-
-        if (!sourcePos || !sourceDim || !link.targets?.length) {
+        if (!sourceNode || !link.targets?.length) {
           return null;
         }
 
         console.log(link.targets);
 
-        const source: LinkExtremity = {
-          nodeId: link.source,
-          position: {
-            x: sourcePos.x,
-            y: sourcePos.y,
-          },
-          dimensions: {
-            width: sourceDim.width,
-            height: sourceDim.height,
-          },
-        };
-
         const targets = link.targets
-          .map((nodeId): LinkExtremity | null => {
-            const pos = positions.get(nodeId);
-            if (!pos) {
-              console.warn("Missing position for target:", nodeId);
+          .map((nodeId) => {
+            const targetNode = positionedNodes.get(nodeId);
+
+            if (!targetNode) {
+              console.warn("Missing positioned node for target:", nodeId);
               return null;
             }
 
-            const dim = dimensions.get(nodeId);
-            if (!dim) {
-              console.warn("Missing dimensions for target:", nodeId);
-              return null;
-            }
-
-            return {
-              nodeId,
-              position: {
-                x: pos.x,
-                y: pos.y,
-              },
-              dimensions: {
-                height: dim.height,
-                width: dim.width,
-              },
-            };
+            return targetNode;
           })
           .filter((link) => !!link);
 
         if (!targets.length) return null;
 
         console.log("Rendering link:", link, {
-          source,
+          sourceNode,
           targets,
         });
 
         const endpoints = calculateLinkEndpoints({
-          source,
+          source: sourceNode,
           targets,
         });
 
-        console.log({ endpoints });
         return (
           <AnimatedLink
             key={`${link.source}-${link.targets.join("_")}`}
@@ -340,8 +299,8 @@ const calculateLinkEndpoints = ({
   source,
   targets,
 }: {
-  source: LinkExtremity;
-  targets: LinkExtremity[];
+  source: PositionedNode;
+  targets: PositionedNode[];
 }): LinkEndpoints => {
   const leftToRightTargets = targets.sort(
     (t1, t2) => t1.position.x - t2.position.x,
@@ -370,8 +329,6 @@ const calculateLinkEndpoints = ({
     y: targetMinY - distanceBetweenSourceAndTarget / 2,
   };
 
-  console.log(leftToRightTargets);
-
   const leftConnectionLineExtremityX =
     leftToRightTargets[0].position.x +
     leftToRightTargets[0].dimensions.width / 2;
@@ -384,7 +341,7 @@ const calculateLinkEndpoints = ({
     start: rootPos,
     end: connectionPos,
     isArrow: false,
-    segmentId: `source-${source.nodeId}`,
+    segmentId: `source-${source.nodeDef.id}`,
   };
 
   const connectionLines: LinkLineDef[] = [
@@ -392,13 +349,13 @@ const calculateLinkEndpoints = ({
       start: connectionPos,
       end: { x: leftConnectionLineExtremityX, y: connectionPos.y },
       isArrow: false,
-      segmentId: `connection-left-${source.nodeId}`,
+      segmentId: `connection-left-${source.nodeDef.id}`,
     },
     {
       start: connectionPos,
       end: { x: rightConnectionLineExtremityX, y: connectionPos.y },
       isArrow: false,
-      segmentId: `connection-right-${source.nodeId}`,
+      segmentId: `connection-right-${source.nodeDef.id}`,
     },
   ];
 
@@ -413,7 +370,7 @@ const calculateLinkEndpoints = ({
         y: target.position.y - gap,
       },
       isArrow: true,
-      segmentId: `target-${source.nodeId}-${target.nodeId}`,
+      segmentId: `target-${source.nodeDef.id}-${target.nodeDef.id}`,
     }),
   );
 

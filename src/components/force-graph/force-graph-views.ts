@@ -10,8 +10,8 @@ import {
   type SimpleRecommendParams,
 } from "../../data/get-albums-recommendations";
 import {
-  forceGraphAllDimensionsLoadedAtom,
-  type ForceGraphDimensionsLoaded,
+  loadedNodeDimensionsAtom,
+  type NodeDimensions,
 } from "./force-graph-dimensions";
 import type { Position } from "./force-graph-links";
 import {
@@ -89,9 +89,8 @@ export type ViewBuilder<Key extends ViewKey> = {
   buildNodePositions: (params: {
     data: ViewData<Key>;
     selectors: AlbumSelectors;
-    dimensions: Map<string, ForceGraphDimensionsLoaded>;
-    nodeDefs: Map<string, ForceGraphNodeDef>;
-  }) => Map<string, { x: number; y: number }>;
+    nodeDefsWithDimensions: Map<string, NodeDefWithDimensions>;
+  }) => Map<string, Position>;
 
   buildActions: (params: {
     data: ViewData<Key>;
@@ -144,34 +143,37 @@ export const viewBuilders = {
     },
 
     // Build layout positions for this view
-    buildNodePositions: ({ data: { artistId }, selectors, dimensions }) => {
+    buildNodePositions: ({
+      data: { artistId },
+      selectors,
+      nodeDefsWithDimensions,
+    }): Map<string, Position> => {
       const X_GAP = 50;
       const Y_GAP = 50;
 
       const albums = selectors.byArtistMbid(artistId);
 
-      if (dimensions.size === 0) return new Map();
+      if (nodeDefsWithDimensions.size === 0) return new Map();
 
       const MAX_ALBUMS_PER_ROW = 6;
 
       let nextX = 0;
       let nextY = 0;
 
-      const positionMap = new Map<string, { x: number; y: number }>();
+      const positionMap = new Map<string, Position>();
       positionMap.set(artistId, { x: 0, y: 0 }); // Center the artist
 
-      nextY += (dimensions.get(artistId)?.height || 0) + Y_GAP;
+      nextY +=
+        (nodeDefsWithDimensions.get(artistId)?.dimensions.height || 0) + Y_GAP;
 
       const albumsDimensions = albums
         .sort((a, b) => a["release-date"].localeCompare(b["release-date"]))
         .map(({ mbid }) => ({
           albumId: mbid,
-          dimensions: dimensions.get(mbid),
+          dimensions: nodeDefsWithDimensions.get(mbid)?.dimensions,
         }))
         .filter(
-          (
-            d,
-          ): d is { albumId: string; dimensions: ForceGraphDimensionsLoaded } =>
+          (d): d is { albumId: string; dimensions: NodeDimensions } =>
             !!d.dimensions,
         );
 
@@ -232,66 +234,68 @@ export const viewBuilders = {
       return flattenNodeTreeToMap(root);
     },
 
-    buildNodePositions: ({ data, dimensions, nodeDefs }) => {
+    buildNodePositions: ({
+      data,
+      nodeDefsWithDimensions,
+    }): Map<string, Position> => {
       const MARGIN_X_NODES = 20;
       const MARGIN_Y_NODES = 200;
 
       const { albumMbid } = data;
-      const positionMap = new Map<string, { x: number; y: number }>();
+      const positionMap = new Map<string, Position>();
 
-      const albumNode = nodeDefs.get(albumMbid);
-
-      const albumDimensions = dimensions.get(albumMbid);
+      const albumNode = nodeDefsWithDimensions.get(albumMbid);
 
       if (!albumNode) {
         console.warn(`No node found for album MBID: ${albumMbid}`);
         return positionMap;
       }
-      if (!albumDimensions) {
-        console.warn(`No dimensions found for album MBID: ${albumMbid}`);
-        return positionMap;
-      }
 
       console.log({ albumNode });
 
-      if (!albumNode.children?.length) {
+      if (!albumNode.nodeDef.children?.length) {
         positionMap.set(albumMbid, { x: 0, y: 0 });
         return positionMap;
       }
 
       const widthRequiredPerNode = new Map<string, number>();
       const heightPerDepth: number[] = [];
+
       const handleChildrenWidthReqs = ({
         node,
         depth = 0,
       }: {
-        node: ForceGraphNodeDef;
+        node: NodeDefWithDimensions;
         depth?: number;
       }): {
         widthRequired: number;
       } => {
-        if (!node.children?.length) {
-          const extremityWidthRequired = dimensions.get(node.id)?.width ?? 0;
-          widthRequiredPerNode.set(node.id, extremityWidthRequired);
+        if (!node.nodeDef.children?.length) {
+          const extremityWidthRequired = node.dimensions.width ?? 0;
+          widthRequiredPerNode.set(node.nodeDef.id, extremityWidthRequired);
           return { widthRequired: extremityWidthRequired };
         }
 
         heightPerDepth[depth] = Math.max(
           heightPerDepth[depth] ?? 0,
-          dimensions.get(node.id)?.height ?? 0,
+          node.dimensions?.height ?? 0,
         );
 
         let widthRequired = 0;
-        node.children.forEach((child) => {
+        node.nodeDef.children.forEach((child) => {
+          const childNode = nodeDefsWithDimensions.get(child.id);
+          if (!childNode)
+            throw new Error(`Child node missing in defs: ${child.id}`);
+
           const { widthRequired: childWidthRequired } = handleChildrenWidthReqs(
-            { node: child, depth: depth + 1 },
+            { node: childNode, depth: depth + 1 },
           );
           widthRequired += childWidthRequired;
         });
 
-        widthRequired += MARGIN_X_NODES * (node.children.length - 1);
+        widthRequired += MARGIN_X_NODES * (node.nodeDef.children.length - 1);
 
-        widthRequiredPerNode.set(node.id, widthRequired);
+        widthRequiredPerNode.set(node.nodeDef.id, widthRequired);
 
         return { widthRequired };
       };
@@ -307,16 +311,16 @@ export const viewBuilders = {
           yForDepth[depth] + heightForDepth + MARGIN_Y_NODES;
       });
       const handlePositionsForNodes = ({
-        node,
+        nodeDef,
         originPos = { x: 0, y: 0 },
         depth = 0,
       }: {
-        node: ForceGraphNodeDef;
+        nodeDef: ForceGraphNodeDef;
         originPos?: Position;
         depth?: number;
       }) => {
-        if (!node.children?.length) {
-          positionMap.set(node.id, originPos);
+        if (!nodeDef.children?.length) {
+          positionMap.set(nodeDef.id, originPos);
           return;
         }
 
@@ -324,14 +328,14 @@ export const viewBuilders = {
 
         let nextX = originPos.x;
 
-        node.children?.forEach((child) => {
+        nodeDef.children?.forEach((child) => {
           const childOriginPos = {
             x: nextX,
             y: childrenY,
           };
 
           handlePositionsForNodes({
-            node: child,
+            nodeDef: child,
             originPos: childOriginPos,
             depth: depth + 1,
           });
@@ -341,32 +345,36 @@ export const viewBuilders = {
 
         let centeredPosition: number;
 
-        if (node.children.length % 2 !== 0) {
-          const idx = Math.floor((node.children.length + 1) / 2 - 1);
+        if (nodeDef.children.length % 2 !== 0) {
+          const idx = Math.floor((nodeDef.children.length + 1) / 2 - 1);
 
-          centeredPosition = positionMap.get(node.children[idx].id)?.x ?? 0;
+          centeredPosition = positionMap.get(nodeDef.children[idx].id)?.x ?? 0;
         } else {
-          const idx1 = Math.floor(node.children.length / 2);
+          const idx1 = Math.floor(nodeDef.children.length / 2);
           const idx2 = idx1 + 1;
 
-          const width1 = dimensions.get(node.children[idx1].id)?.width ?? 0;
-          const width2 = dimensions.get(node.children[idx2].id)?.width ?? 0;
+          const width1 =
+            nodeDefsWithDimensions.get(nodeDef.children[idx1].id)?.dimensions
+              .width ?? 0;
+          const width2 =
+            nodeDefsWithDimensions.get(nodeDef.children[idx2].id)?.dimensions
+              .width ?? 0;
 
-          const pos1 = positionMap.get(node.children[idx1].id)?.x ?? 0;
-          const pos2 = positionMap.get(node.children[idx2].id)?.x ?? 0;
+          const pos1 = positionMap.get(nodeDef.children[idx1].id)?.x ?? 0;
+          const pos2 = positionMap.get(nodeDef.children[idx2].id)?.x ?? 0;
 
           const center1 = pos1 + width1 / 2;
           const center2 = pos2 + width2 / 2;
 
           centeredPosition = (center1 + center2) / 2;
         }
-        positionMap.set(node.id, {
+        positionMap.set(nodeDef.id, {
           x: centeredPosition,
           y: yForDepth[depth] ?? 0,
         });
       };
 
-      handlePositionsForNodes({ node: albumNode });
+      handlePositionsForNodes({ nodeDef: albumNode.nodeDef });
 
       return positionMap;
     },
@@ -458,6 +466,85 @@ export type ViewConfig<TKey extends ViewKey = ViewKey> = {
   data: ViewData<TKey>;
 };
 
+type NodeDefWithDimensions = {
+  nodeDef: ForceGraphNodeDef;
+  dimensions: NodeDimensions;
+};
+
+export type PositionedNode = NodeDefWithDimensions & {
+  position: Position;
+};
+
+export type NodePositioningState =
+  | { state: "init" }
+  | {
+      state: "in-progress";
+      transitionNodes?: Map<string, PositionedNode>;
+      targetNodeDefs: Map<string, ForceGraphNodeDef>;
+    }
+  | {
+      state: "ready";
+      positionedNodes: Map<string, PositionedNode>;
+    };
+
+export const nodePositioningStateAtom = atom((get): NodePositioningState => {
+  const nodeDefs = get(calculatedNodeDefsAtom);
+
+  if (!nodeDefs?.size) return { state: "init" };
+
+  const dimensions = get(loadedNodeDimensionsAtom);
+
+  let areAllNodeDefsDimensionsLoaded = true;
+  const nodeDefsWithDimensions = new Map<string, NodeDefWithDimensions>();
+
+  for (const [id, nodeDef] of nodeDefs) {
+    const nodeDimensions = dimensions.get(id);
+    if (!nodeDimensions) {
+      areAllNodeDefsDimensionsLoaded = false;
+      break;
+    }
+    nodeDefsWithDimensions.set(id, { dimensions: nodeDimensions, nodeDef });
+  }
+
+  if (!areAllNodeDefsDimensionsLoaded) {
+    const transitionNodes = get(transitioningNodesAtom);
+
+    return {
+      state: "in-progress",
+      transitionNodes,
+      targetNodeDefs: nodeDefs,
+    };
+  }
+
+  const viewConfig = get(activeViewConfigAtom);
+
+  if (!viewConfig) throw new Error("No view config found on active view");
+  const selectors = get(albumDataSelectorsAtom);
+
+  const builder = viewBuilders[viewConfig.key];
+
+  const positions = builder.buildNodePositions({
+    data: viewConfig.data as any,
+    selectors,
+    nodeDefsWithDimensions,
+  });
+
+  const positionedNodes = new Map<string, PositionedNode>();
+
+  for (const [id, nodeDefWithDimension] of nodeDefsWithDimensions) {
+    const position = positions.get(id);
+
+    if (!position) throw new Error(`No position generated for node def ${id}`);
+
+    positionedNodes.set(id, { ...nodeDefWithDimension, position });
+  }
+
+  return {
+    state: "ready",
+    positionedNodes,
+  };
+});
+
 const activeViewConfigAtom = atom<ViewConfig | null>(null);
 export const activeViewConfigReadOnlyAtom = atom((get) =>
   get(activeViewConfigAtom),
@@ -477,26 +564,6 @@ export const calculatedNodeDefsAtom = atom((get) => {
     data: viewConfig.data as any,
     selectors,
   }) as Map<string, ForceGraphNodeDef>;
-});
-
-// Derived positions atom - automatically recalculates when dimensions or view changes
-export const calculatedNodePositionsAtom = atom((get) => {
-  const selectors = get(albumDataSelectorsAtom);
-  const dimensions = get(forceGraphAllDimensionsLoadedAtom);
-  const viewConfig = get(activeViewConfigAtom);
-  const nodeDefs = get(calculatedNodeDefsAtom);
-
-  if (!dimensions || !viewConfig || !nodeDefs) return null;
-
-  const builder = viewBuilders[viewConfig.key];
-  if (!builder) return null;
-
-  return builder.buildNodePositions({
-    data: viewConfig.data as any,
-    selectors,
-    dimensions,
-    nodeDefs,
-  });
 });
 
 export type ViewActionsAtomOutput<K extends ViewKey> = {
@@ -539,9 +606,12 @@ export const createViewActionsAtom = ({
 
 // Setter for changing the active view (drives both nodes and positions)
 export const setActiveViewAtom = atom(null, (get, set, config: ViewConfig) => {
-  const currentNodeDefs = get(calculatedNodeDefsAtom);
-  if (currentNodeDefs) {
-    set(transitioningNodesAtom, currentNodeDefs);
+  const currentPositioningState = get(nodePositioningStateAtom);
+  if (currentPositioningState.state === "in-progress") {
+    console.warn("New active view while positioning is in progress");
+  }
+  if (currentPositioningState.state === "ready") {
+    set(transitioningNodesAtom, currentPositioningState.positionedNodes);
   }
   set(activeViewConfigAtom, config);
 });
@@ -554,7 +624,7 @@ export const nodeContextFamily = atomFamily((id: string) => {
   });
 });
 
-export const transitioningNodesAtom = atom<Map<string, ForceGraphNodeDef>>();
+export const transitioningNodesAtom = atom<Map<string, PositionedNode>>();
 
 export const transitioningNodesFamily = atomFamily((id: string) => {
   return atom((get) => {
