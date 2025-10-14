@@ -1,3 +1,4 @@
+import type { SimpleRecommendation } from "../../data/get-albums-recommendations";
 import type { AlbumCardVariant } from "../AlbumCard";
 
 export type ForceGraphNodeDefBase = {
@@ -19,6 +20,7 @@ export type AlbumContext = {
     title: string;
     artist: string;
     variant: AlbumCardVariant;
+    recommendation?: Omit<SimpleRecommendation, "album">;
   };
 };
 

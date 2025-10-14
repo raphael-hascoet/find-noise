@@ -54,6 +54,7 @@ export type SimpleRecommendParams = {
   opts?: {
     requireAnyGenreOverlap?: boolean; // quick filter to keep only genre-related candidates
     excludeSameArtist?: boolean;
+    excludeDoubledArtist?: boolean;
   };
 };
 
@@ -99,7 +100,7 @@ export function simpleRecommendAlbums({
     });
   }
 
-  const recs: SimpleRecommendation[] = pool.map((cand) => {
+  let recs: SimpleRecommendation[] = pool.map((cand) => {
     const candPrim = cand["primary-genres"] ?? [];
     const candSec = cand["secondary-genres"] ?? [];
     const candDescArr = cand.descriptors ?? [];
@@ -182,6 +183,20 @@ export function simpleRecommendAlbums({
     }
     return b.album["rating-count"] - a.album["rating-count"];
   });
+
+  if (opts?.excludeDoubledArtist) {
+    const artistsSet = new Set<string>();
+
+    const recsWithoutDoubledArtist: SimpleRecommendation[] = [];
+
+    recs.forEach((rec) => {
+      if (!artistsSet.has(rec.album["artist-mbid"])) {
+        recsWithoutDoubledArtist.push(rec);
+        artistsSet.add(rec.album["artist-mbid"]);
+      }
+    });
+    recs = recsWithoutDoubledArtist;
+  }
 
   return recs.slice(0, Math.max(0, topX));
 }

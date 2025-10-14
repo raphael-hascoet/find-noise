@@ -238,8 +238,8 @@ export const viewBuilders = {
       data,
       nodeDefsWithDimensions,
     }): Map<string, Position> => {
-      const MARGIN_X_NODES = 20;
-      const MARGIN_Y_NODES = 200;
+      const MARGIN_X_NODES = 100;
+      const MARGIN_Y_NODES = 350;
 
       const { albumMbid } = data;
       const positionMap = new Map<string, Position>();
@@ -250,8 +250,6 @@ export const viewBuilders = {
         console.warn(`No node found for album MBID: ${albumMbid}`);
         return positionMap;
       }
-
-      console.log({ albumNode });
 
       if (!albumNode.nodeDef.children?.length) {
         positionMap.set(albumMbid, { x: 0, y: 0 });
@@ -427,6 +425,10 @@ export const viewBuilders = {
                     artist: rec.album["artist-mbid"],
                     title: rec.album.release,
                     variant: "flowchart",
+                    recommendation: {
+                      reason: rec.reason,
+                      score: rec.score,
+                    },
                   },
                 },
               }) as ForceGraphNodeDef,

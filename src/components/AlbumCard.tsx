@@ -78,7 +78,17 @@ export const AlbumCard = memo(function AlbumCard({
                   albumMbid: graphNodeProps.nodeId,
                   params: {
                     topX: 5,
-                    opts: { excludeSameArtist: true },
+                    opts: {
+                      excludeSameArtist: true,
+                      excludeDoubledArtist: true,
+                    },
+                    weights: {
+                      genrePP: 0.9,
+                      genrePS: 0.8,
+                      genreSS: 0.6,
+                      descriptors: 0.6,
+                      rating: 1.2,
+                    },
                   },
                 });
               }

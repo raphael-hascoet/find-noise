@@ -1,6 +1,7 @@
 import { atom, useAtomValue } from "jotai";
 import { animate, motion, useMotionValue } from "motion/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import type { SimpleReason } from "../../data/get-albums-recommendations";
 import type { PositionedNode } from "./force-graph-views";
 
 type Link = {
@@ -18,7 +19,13 @@ type LinkLineDef = {
   end: Position;
   isArrow: boolean;
   segmentId: string;
+  tags?: TagDef[];
 };
+
+const isLinkLineDefWithTags = (def: LinkLineDef): def is LinkLineDefWithTags =>
+  !!def.tags;
+
+type LinkLineDefWithTags = LinkLineDef & { tags: TagDef };
 
 type LinkEndpoints = {
   drawOrderedLines: {
@@ -188,17 +195,20 @@ export function AnimatedLink({ drawOrderedLines }: LinkEndpoints) {
   return (
     <>
       {items.map(({ gIdx, lineIdx, seg }) => (
-        <AnimatedSegment
-          key={seg.segmentId}
-          seg={seg}
-          //   len={len}
-          canReveal={gIdx <= activeGroup}
-          isNew={!seenSet.has(seg.segmentId)}
-          onRevealDone={() => handleRevealDone(gIdx)}
-          moveDuration={MOVE_DURATION}
-          revealDuration={REVEAL_DURATION}
-          ease={EASE as [number, number, number, number]}
-        />
+        <Fragment key={seg.segmentId}>
+          <AnimatedSegment
+            key={seg.segmentId}
+            seg={seg}
+            //   len={len}
+            canReveal={gIdx <= activeGroup}
+            isNew={!seenSet.has(seg.segmentId)}
+            onRevealDone={() => handleRevealDone(gIdx)}
+            moveDuration={MOVE_DURATION}
+            revealDuration={REVEAL_DURATION}
+            ease={EASE as [number, number, number, number]}
+          />
+          {isLinkLineDefWithTags(seg) && <TagCloud lineDef={seg} />}
+        </Fragment>
       ))}
     </>
   );
@@ -274,6 +284,7 @@ function AnimatedSegment({
       y2={y2}
       stroke="#999"
       strokeWidth={4}
+      strokeLinecap="round"
       markerEnd={seg.isArrow ? "url(#link-arrow)" : undefined}
       style={{ pointerEvents: "none" }}
       initial={{ pathLength: 0 }}
@@ -293,6 +304,68 @@ function AnimatedSegment({
     />
   );
 }
+
+const X_TAG_LINE_SPACING = 16;
+const Y_TAG_LINE_SPACING = 16;
+const WIDTH_PER_CHAR_BASE = 4;
+
+const TagCloud = ({ lineDef }: { lineDef: LinkLineDefWithTags }) => {
+  const tagProps: FloatingTagProps[] = useMemo(() => {
+    const lineDefMiddlePos: Position = {
+      x: (lineDef.end.x + lineDef.start.x) / 2,
+      y: (lineDef.end.y + lineDef.start.y) / 2,
+    };
+    return lineDef.tags.map((tag, index) => {
+      const sideX: "left" | "right" = index % 2 === 0 ? "left" : "right";
+      const sideY: "top" | "bottom" = index < 2 ? "top" : "bottom";
+
+      return {
+        basePos: {
+          x:
+            sideX === "left"
+              ? lineDefMiddlePos.x -
+                (X_TAG_LINE_SPACING +
+                  WIDTH_PER_CHAR_BASE * (tag.size / 8) * tag.label.length)
+              : lineDefMiddlePos.x + X_TAG_LINE_SPACING,
+          y:
+            sideY === "top"
+              ? lineDefMiddlePos.y - Y_TAG_LINE_SPACING - tag.size
+              : lineDefMiddlePos.y + Y_TAG_LINE_SPACING,
+        },
+        tag,
+        id: `${sideY}-${sideX}`,
+      };
+    });
+  }, [lineDef]);
+
+  return (
+    <>
+      {tagProps.map((props) => (
+        <FloatingTag key={props.id} {...props} />
+      ))}
+    </>
+  );
+};
+
+type FloatingTagProps = { basePos: Position; tag: TagDef; id: string };
+
+const FloatingTag = ({ basePos, tag }: FloatingTagProps) => {
+  const x = useMotionValue(basePos.x);
+  const y = useMotionValue(basePos.y);
+
+  useEffect(() => {
+    void Promise.all([
+      animate(x, basePos.x, { duration: MOVE_DURATION, ease: EASE }).finished,
+      animate(y, basePos.y, { duration: MOVE_DURATION, ease: EASE }).finished,
+    ]);
+  }, [basePos.x, basePos.y]);
+
+  return (
+    <motion.text fill={tag.color} x={x} y={y} fontSize={`${tag.size}px`}>
+      {tag.label}
+    </motion.text>
+  );
+};
 
 // Calculate link endpoints with edge-aware positioning (from original component)
 const calculateLinkEndpoints = ({
@@ -326,7 +399,7 @@ const calculateLinkEndpoints = ({
 
   const connectionPos = {
     x: source.position.x + sourceHalfW,
-    y: targetMinY - distanceBetweenSourceAndTarget / 2,
+    y: targetMinY - distanceBetweenSourceAndTarget * (5 / 8),
   };
 
   const leftConnectionLineExtremityX =
@@ -360,18 +433,35 @@ const calculateLinkEndpoints = ({
   ];
 
   const connectionToTargetLines = leftToRightTargets.map(
-    (target): LinkLineDef => ({
-      start: {
-        y: connectionPos.y,
-        x: target.position.x + target.dimensions.width / 2,
-      },
-      end: {
-        x: target.position.x + target.dimensions.width / 2,
-        y: target.position.y - gap,
-      },
-      isArrow: true,
-      segmentId: `target-${source.nodeDef.id}-${target.nodeDef.id}`,
-    }),
+    (target): LinkLineDef => {
+      const nodeContext = target.nodeDef.context;
+
+      if (nodeContext.type !== "album") {
+        throw new Error(
+          `Link target does not have album context: ${target.nodeDef.id}`,
+        );
+      }
+
+      const recommendation = nodeContext.data.recommendation;
+
+      return {
+        start: {
+          y: connectionPos.y,
+          x: target.position.x + target.dimensions.width / 2,
+        },
+        end: {
+          x: target.position.x + target.dimensions.width / 2,
+          y: target.position.y - gap,
+        },
+        isArrow: true,
+        segmentId: `target-${source.nodeDef.id}-${target.nodeDef.id}`,
+        tags: recommendation?.reason
+          ? getTagsFromReasoning(recommendation.reason, {
+              rngSeed: `${source.nodeDef.id}-${target.nodeDef.id}`,
+            })
+          : undefined,
+      };
+    },
   );
 
   return {
@@ -382,3 +472,131 @@ const calculateLinkEndpoints = ({
     ],
   };
 };
+
+type TagDef = {
+  size: number;
+  color: string;
+  label: string;
+};
+
+const TAG_REASONING_ORDER = {
+  genres: {
+    primaryToPrimaryGenre: 1,
+    primaryToSecondaryGenre: 2,
+    secondaryToSecondaryGenre: 3,
+  },
+} as const;
+
+const TAG_SIZE = {
+  genres: {
+    primaryToPrimaryGenre: 16,
+    primaryToSecondaryGenre: 14,
+    secondaryToSecondaryGenre: 12,
+  },
+  descriptor: 12,
+} as const;
+
+const DEFAULT_COLOR = "#ccc";
+
+const MAX_TAGS_COUNT = 4;
+
+const getTagsFromReasoning = (
+  reasoning: SimpleReason,
+  opts?: { rngSeed?: string },
+): TagDef[] => {
+  const genreTags: { def: TagDef; order: number }[] = [];
+
+  if (reasoning.genreMatches.primaryPrimary.shared.length) {
+    reasoning.genreMatches.primaryPrimary.shared.forEach((genre) =>
+      genreTags.push({
+        order: TAG_REASONING_ORDER.genres.primaryToPrimaryGenre,
+        def: {
+          color: DEFAULT_COLOR, // TODO: Apply color fitting genres/descriptors
+          label: genre,
+          size: TAG_SIZE.genres.primaryToPrimaryGenre,
+        },
+      }),
+    );
+  }
+
+  if (reasoning.genreMatches.primarySecondary.shared.length) {
+    reasoning.genreMatches.primarySecondary.shared.forEach((genre) =>
+      genreTags.push({
+        order: TAG_REASONING_ORDER.genres.primaryToSecondaryGenre,
+        def: {
+          color: DEFAULT_COLOR,
+          label: genre,
+          size: TAG_SIZE.genres.primaryToSecondaryGenre,
+        },
+      }),
+    );
+  }
+
+  if (reasoning.genreMatches.secondaryPrimary.shared.length) {
+    reasoning.genreMatches.secondaryPrimary.shared.forEach((genre) =>
+      genreTags.push({
+        order: TAG_REASONING_ORDER.genres.primaryToSecondaryGenre,
+        def: {
+          color: DEFAULT_COLOR,
+          label: genre,
+          size: TAG_SIZE.genres.primaryToSecondaryGenre,
+        },
+      }),
+    );
+  }
+
+  if (reasoning.genreMatches.secondarySecondary.shared.length) {
+    reasoning.genreMatches.secondarySecondary.shared.forEach((genre) =>
+      genreTags.push({
+        order: TAG_REASONING_ORDER.genres.secondaryToSecondaryGenre,
+        def: {
+          color: DEFAULT_COLOR,
+          label: genre,
+          size: TAG_SIZE.genres.secondaryToSecondaryGenre,
+        },
+      }),
+    );
+  }
+
+  const genreTagsSorted = genreTags
+    .sort(({ order: order1 }, { order: order2 }) => order1 - order2)
+    .map(({ def }) => def);
+
+  const genreTagsSet = new Set<string>();
+
+  const genreTagsWithoutDoubles: TagDef[] = [];
+
+  genreTagsSorted.forEach((tag) => {
+    if (!genreTagsSet.has(tag.label)) {
+      genreTagsWithoutDoubles.push(tag);
+      genreTagsSet.add(tag.label);
+    }
+  });
+
+  const genreTagsShown = genreTagsWithoutDoubles.slice(0, 2);
+
+  const descriptorTags: TagDef[] = reasoning.descriptorOverlap.shared
+    .map((descriptor) => {
+      return {
+        color: DEFAULT_COLOR,
+        label: descriptor,
+        size: TAG_SIZE.descriptor,
+      };
+    })
+    .map((value) => ({ value, sort: seededRandom(opts?.rngSeed ?? "seed") }))
+    .sort((a, b) => a.sort - b.sort)
+    .map(({ value }) => value)
+    .slice(0, MAX_TAGS_COUNT - genreTagsShown.length);
+
+  return [...genreTagsShown, ...descriptorTags];
+};
+
+function seededRandom(str: string) {
+  console.log({ str });
+  let h = 0x811c9dc5; // FNV offset basis
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193); // FNV prime
+  }
+  return h >>> 0;
+}
