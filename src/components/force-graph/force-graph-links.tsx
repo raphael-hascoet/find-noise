@@ -1,6 +1,14 @@
 import { atom, useAtomValue } from "jotai";
 import { animate, motion, useMotionValue } from "motion/react";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { SimpleReason } from "../../data/get-albums-recommendations";
 import type { PositionedNode } from "./force-graph-views";
 
@@ -305,38 +313,110 @@ function AnimatedSegment({
   );
 }
 
-const X_TAG_LINE_SPACING = 16;
-const Y_TAG_LINE_SPACING = 16;
-const WIDTH_PER_CHAR_BASE = 4;
+const X_TAG_CENTER_SPACING = 65;
+const Y_TAG_CENTER_SPACING = 20;
+
+type TagSidePosition =
+  | "top-left"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-right";
 
 const TagCloud = ({ lineDef }: { lineDef: LinkLineDefWithTags }) => {
-  const tagProps: FloatingTagProps[] = useMemo(() => {
-    const lineDefMiddlePos: Position = {
+  const calculatedFontSizesRef = useRef<
+    Map<TagSidePosition, { fontSize: number; length: number }>
+  >(new Map());
+
+  const [calculatedFontSizesDone, setCalculatedFontSizesDone] =
+    useState<Map<TagSidePosition, { fontSize: number; length: number }>>();
+
+  const lineDefMiddlePos = useMemo(
+    () => ({
       x: (lineDef.end.x + lineDef.start.x) / 2,
       y: (lineDef.end.y + lineDef.start.y) / 2,
-    };
+    }),
+    [lineDef],
+  );
+
+  const shellTagProps: ShellTagProps[] = useMemo(() => {
     return lineDef.tags.map((tag, index) => {
       const sideX: "left" | "right" = index % 2 === 0 ? "left" : "right";
       const sideY: "top" | "bottom" = index < 2 ? "top" : "bottom";
 
       return {
-        basePos: {
-          x:
-            sideX === "left"
-              ? lineDefMiddlePos.x -
-                (X_TAG_LINE_SPACING +
-                  WIDTH_PER_CHAR_BASE * (tag.size / 8) * tag.label.length)
-              : lineDefMiddlePos.x + X_TAG_LINE_SPACING,
-          y:
-            sideY === "top"
-              ? lineDefMiddlePos.y - Y_TAG_LINE_SPACING - tag.size
-              : lineDefMiddlePos.y + Y_TAG_LINE_SPACING,
-        },
+        centerPos: lineDefMiddlePos,
         tag,
         id: `${sideY}-${sideX}`,
+        sides: {
+          x: sideX,
+          y: sideY,
+        },
       };
     });
   }, [lineDef]);
+
+  const onDimensionFound = useCallback(
+    (id: TagSidePosition, dimensions: { fontSize: number; length: number }) => {
+      if (!!calculatedFontSizesDone) {
+        return;
+      }
+
+      calculatedFontSizesRef.current.set(id, dimensions);
+      if (calculatedFontSizesRef.current.size === shellTagProps.length) {
+        setCalculatedFontSizesDone(calculatedFontSizesRef.current);
+      }
+    },
+    [calculatedFontSizesDone],
+  );
+
+  const tagProps = useMemo(() => {
+    if (!calculatedFontSizesDone) return null;
+
+    return shellTagProps.map(
+      ({ id, tag }): FloatingTagProps => ({
+        basePos: {
+          x:
+            id === "top-left" || id === "bottom-left"
+              ? lineDefMiddlePos.x -
+                (X_TAG_CENTER_SPACING +
+                  calculatedFontSizesDone.get(id)!.length / 2)
+              : lineDefMiddlePos.x +
+                (X_TAG_CENTER_SPACING -
+                  calculatedFontSizesDone.get(id)!.length / 2),
+          y:
+            id === "top-left" || id === "top-right"
+              ? lineDefMiddlePos.y -
+                Y_TAG_CENTER_SPACING -
+                (TAG_MAX_FONT_SIZE -
+                  calculatedFontSizesDone.get(id)!.fontSize) /
+                  2
+              : lineDefMiddlePos.y +
+                Y_TAG_CENTER_SPACING +
+                (TAG_MAX_FONT_SIZE -
+                  calculatedFontSizesDone.get(id)!.fontSize) /
+                  2,
+        },
+        fontSize: calculatedFontSizesDone.get(id)!.fontSize,
+        tag: tag,
+        id,
+      }),
+    );
+  }, [shellTagProps, calculatedFontSizesDone]);
+
+  if (!tagProps) {
+    return (
+      <>
+        {shellTagProps.map((props) => (
+          <ShellTag
+            key={`shell-${props.id}}`}
+            id={props.id}
+            label={props.tag.label}
+            onDimensionFound={onDimensionFound}
+          />
+        ))}
+      </>
+    );
+  }
 
   return (
     <>
@@ -347,9 +427,81 @@ const TagCloud = ({ lineDef }: { lineDef: LinkLineDefWithTags }) => {
   );
 };
 
-type FloatingTagProps = { basePos: Position; tag: TagDef; id: string };
+const TAG_MAX_WIDTH = 100;
 
-const FloatingTag = ({ basePos, tag }: FloatingTagProps) => {
+const TAG_MAX_FONT_SIZE = 14;
+
+type ShellTagProps = {
+  centerPos: Position;
+  tag: TagDef;
+  id: TagSidePosition;
+  sides: {
+    x: "left" | "right";
+    y: "top" | "bottom";
+  };
+};
+
+const ShellTag = ({
+  label,
+  id,
+  onDimensionFound,
+}: {
+  id: TagSidePosition;
+  label: string;
+  onDimensionFound: (
+    id: TagSidePosition,
+    dimensions: { fontSize: number; length: number },
+  ) => void;
+}) => {
+  const isDimensionFound = useRef(false);
+
+  const textRef = useRef<SVGTextElement>(null);
+
+  useLayoutEffect(() => {
+    if (!textRef.current || isDimensionFound.current) return;
+
+    const el = textRef.current;
+
+    let fontSize: number;
+    let finalLength: number;
+
+    const computedLength = el.getComputedTextLength();
+
+    if (computedLength <= TAG_MAX_WIDTH) {
+      fontSize = TAG_MAX_FONT_SIZE;
+      finalLength = computedLength;
+    } else {
+      const fontWidthRatio = TAG_MAX_FONT_SIZE / computedLength;
+
+      fontSize = Math.floor(fontWidthRatio * TAG_MAX_WIDTH);
+      finalLength = fontSize / fontWidthRatio;
+    }
+
+    onDimensionFound(id, { fontSize, length: finalLength });
+    isDimensionFound.current = true;
+  }, [textRef]);
+
+  return (
+    <motion.text
+      x={0}
+      y={0}
+      opacity={0}
+      ref={textRef}
+      fontSize={`${TAG_MAX_FONT_SIZE}`}
+    >
+      {label}
+    </motion.text>
+  );
+};
+
+type FloatingTagProps = {
+  basePos: Position;
+  fontSize: number;
+  tag: TagDef;
+  id: TagSidePosition;
+};
+
+const FloatingTag = ({ basePos, tag, fontSize }: FloatingTagProps) => {
   const x = useMotionValue(basePos.x);
   const y = useMotionValue(basePos.y);
 
@@ -361,7 +513,7 @@ const FloatingTag = ({ basePos, tag }: FloatingTagProps) => {
   }, [basePos.x, basePos.y]);
 
   return (
-    <motion.text fill={tag.color} x={x} y={y} fontSize={`${tag.size}px`}>
+    <motion.text fill={tag.color} x={x} y={y} fontSize={fontSize}>
       {tag.label}
     </motion.text>
   );
@@ -474,7 +626,6 @@ const calculateLinkEndpoints = ({
 };
 
 type TagDef = {
-  size: number;
   color: string;
   label: string;
 };
@@ -485,15 +636,6 @@ const TAG_REASONING_ORDER = {
     primaryToSecondaryGenre: 2,
     secondaryToSecondaryGenre: 3,
   },
-} as const;
-
-const TAG_SIZE = {
-  genres: {
-    primaryToPrimaryGenre: 16,
-    primaryToSecondaryGenre: 14,
-    secondaryToSecondaryGenre: 12,
-  },
-  descriptor: 12,
 } as const;
 
 const DEFAULT_COLOR = "#ccc";
@@ -513,7 +655,6 @@ const getTagsFromReasoning = (
         def: {
           color: DEFAULT_COLOR, // TODO: Apply color fitting genres/descriptors
           label: genre,
-          size: TAG_SIZE.genres.primaryToPrimaryGenre,
         },
       }),
     );
@@ -526,7 +667,6 @@ const getTagsFromReasoning = (
         def: {
           color: DEFAULT_COLOR,
           label: genre,
-          size: TAG_SIZE.genres.primaryToSecondaryGenre,
         },
       }),
     );
@@ -539,7 +679,6 @@ const getTagsFromReasoning = (
         def: {
           color: DEFAULT_COLOR,
           label: genre,
-          size: TAG_SIZE.genres.primaryToSecondaryGenre,
         },
       }),
     );
@@ -552,7 +691,6 @@ const getTagsFromReasoning = (
         def: {
           color: DEFAULT_COLOR,
           label: genre,
-          size: TAG_SIZE.genres.secondaryToSecondaryGenre,
         },
       }),
     );
@@ -580,7 +718,6 @@ const getTagsFromReasoning = (
       return {
         color: DEFAULT_COLOR,
         label: descriptor,
-        size: TAG_SIZE.descriptor,
       };
     })
     .map((value) => ({ value, sort: seededRandom(opts?.rngSeed ?? "seed") }))
