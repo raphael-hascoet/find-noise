@@ -113,7 +113,7 @@ const ForceGraphContent = function ({
     renderer.defs
       .append("marker")
       .attr("id", "link-arrow")
-      .attr("viewBox", "0 0 10 10")
+      .attr("viewBox", "0 0 11 11")
       .attr("refX", 9)
       .attr("refY", 5)
       .attr("markerWidth", 7)
@@ -130,7 +130,8 @@ const ForceGraphContent = function ({
       .attr("x2", (d) => d.x2)
       .attr("y2", (d) => d.y2)
       .attr("stroke", "#999")
-      .attr("stroke-width", 1.2);
+      .attr("stroke-width", 1.2)
+      .attr("stroke-linecap", "round");
   }, []);
 
   // Initial transform: center content with some padding and scale to 0.5

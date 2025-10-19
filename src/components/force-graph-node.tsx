@@ -26,7 +26,7 @@ export const ForceGraphNode = ({ nodeId, children }: ForceGraphNodeProps) => {
 
   return (
     <div
-      className="flex w-fit flex-col items-center justify-center gap-2 rounded-lg bg-gray-800 p-4 shadow-sm/30 shadow-gray-500"
+      className="flex w-fit flex-col items-center justify-center gap-2 rounded-lg bg-linear-(--subtle-gray-gradient) p-4 shadow-sm/30"
       ref={ref}
       tabIndex={0}
     >

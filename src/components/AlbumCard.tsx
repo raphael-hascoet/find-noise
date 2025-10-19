@@ -93,7 +93,7 @@ export const AlbumCard = memo(function AlbumCard({
                 });
               }
             }}
-            className="cursor-pointer rounded-full p-1 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
+            className="cursor-pointer rounded-full bg-gray-700/60 p-1.5 text-gray-400 shadow-sm/25 shadow-gray-950 hover:bg-gray-700"
           >
             <GitGraph width={16} height={16} />
           </button>
@@ -115,7 +115,7 @@ export const AlbumCard = memo(function AlbumCard({
                   });
                 }
               }}
-              className="cursor-pointer rounded-full p-1 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
+              className="cursor-pointer rounded-full bg-gray-700/60 p-1.5 text-gray-400 shadow-sm/25 shadow-gray-950"
             >
               <ZoomIn width={16} height={16} />
             </button>
