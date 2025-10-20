@@ -132,7 +132,7 @@ function AnimatedLink({ drawOrderedLines }: LinkEndpoints) {
 
   // Sequencer state
   const [activeGroup, setActiveGroup] = useState(0);
-  const doneCountsRef = useRef<number[]>(groups.map((g) => 0));
+  const doneCountsRef = useRef<number[]>(groups.map(() => 0));
   //   const seqCancelRef = useRef(false);
 
   //   // Reset sequencing when input changes

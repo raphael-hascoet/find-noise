@@ -394,7 +394,6 @@ function NodeMotion({
   left,
   top,
   children,
-  nodeId,
 }: {
   left: number;
   top: number;
