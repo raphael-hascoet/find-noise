@@ -84,32 +84,6 @@ const ViewsRendererContent = function ({
         svgRef as RefObject<SVGSVGElement>,
       );
     }
-
-    const renderer = rendererRef.current;
-    if (!renderer) return;
-
-    renderer.defs
-      .append("marker")
-      .attr("id", "link-arrow")
-      .attr("viewBox", "0 0 11 11")
-      .attr("refX", 9)
-      .attr("refY", 5)
-      .attr("markerWidth", 7)
-      .attr("markerHeight", 7)
-      .attr("orient", "auto")
-      .selectAll("line")
-      .data([
-        { x1: 3, y1: 2, x2: 10, y2: 5 },
-        { x1: 3, y1: 8, x2: 10, y2: 5 },
-      ])
-      .join("line")
-      .attr("x1", (d) => d.x1)
-      .attr("y1", (d) => d.y1)
-      .attr("x2", (d) => d.x2)
-      .attr("y2", (d) => d.y2)
-      .attr("stroke", "#999")
-      .attr("stroke-width", 1.2)
-      .attr("stroke-linecap", "round");
   }, []);
 
   const tx = useMotionValue(0);
@@ -230,51 +204,60 @@ const ViewsRendererContent = function ({
             )}
         </AnimatePresence>
       </motion.div>
-      <div className="fixed right-2 bottom-2 flex gap-2 border-gray-800 bg-amber-900 p-2">
-        <button
-          className="cursor-pointer rounded-full bg-gray-800 p-2 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
-          onClick={() => {
-            const zoomRoot = d3.select(
-              (svgRef as RefObject<SVGSVGElement>).current,
+      <ZoomButtons
+        onZoomIn={() => {
+          const zoomRoot = d3.select(
+            (svgRef as RefObject<SVGSVGElement>).current,
+          );
+          zoomRoot
+            .transition()
+            .duration(200)
+            .call(
+              (d3ZoomRef as RefObject<d3.ZoomBehavior<SVGSVGElement, unknown>>)
+                .current.scaleBy,
+              1.2,
             );
-            zoomRoot
-              .transition()
-              .duration(200)
-              .call(
-                (
-                  d3ZoomRef as RefObject<
-                    d3.ZoomBehavior<SVGSVGElement, unknown>
-                  >
-                ).current.scaleBy,
-                1.2,
-              );
-          }}
-        >
-          <ZoomIn width={16} height={16} />
-        </button>
-        <button
-          className="cursor-pointer rounded-full bg-gray-800 p-2 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
-          onClick={() => {
-            const zoomRoot = d3.select(
-              (svgRef as RefObject<SVGSVGElement>).current,
+        }}
+        onZoomOut={() => {
+          const zoomRoot = d3.select(
+            (svgRef as RefObject<SVGSVGElement>).current,
+          );
+          zoomRoot
+            .transition()
+            .duration(200)
+            .call(
+              (d3ZoomRef as RefObject<d3.ZoomBehavior<SVGSVGElement, unknown>>)
+                .current.scaleBy,
+              1 / 1.2,
             );
-            zoomRoot
-              .transition()
-              .duration(200)
-              .call(
-                (
-                  d3ZoomRef as RefObject<
-                    d3.ZoomBehavior<SVGSVGElement, unknown>
-                  >
-                ).current.scaleBy,
-                1 / 1.2,
-              );
-          }}
-        >
-          <ZoomOut width={16} height={16} />
-        </button>
-      </div>
+        }}
+      />
     </>
+  );
+};
+
+const ZoomButtons = ({
+  onZoomIn,
+  onZoomOut,
+}: {
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+}) => {
+  return (
+    <div className="fixed right-2 bottom-2 flex gap-2 border-gray-800 bg-amber-900 p-2">
+      <button
+        className="cursor-pointer rounded-full bg-gray-800 p-2 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
+        onClick={onZoomIn}
+      >
+        <ZoomIn width={16} height={16} />
+      </button>
+      <button
+        className="cursor-pointer rounded-full bg-gray-800 p-2 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
+        onClick={onZoomOut}
+      >
+        <ZoomOut width={16} height={16} />
+      </button>
+    </div>
   );
 };
 

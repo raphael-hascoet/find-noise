@@ -1,15 +1,18 @@
 import { useSetAtom } from "jotai";
 import { useLayoutEffect, useRef, type PropsWithChildren } from "react";
-import { registerNodeDimensionsAtom } from "./views/nodes/view-node-dimensions";
+import { registerNodeDimensionsAtom } from "../view-node-dimensions";
 
-export type ViewNodeBase = {
+export type NodeContentWrapperPropsBase = {
   nodeId: string;
   positioned: boolean;
 };
 
-type ViewNodeProps = ViewNodeBase & PropsWithChildren;
+type NodeContentWrapperProps = NodeContentWrapperPropsBase & PropsWithChildren;
 
-export const ViewNode = ({ nodeId, children }: ViewNodeProps) => {
+export const NodeContentWrapper = ({
+  nodeId,
+  children,
+}: NodeContentWrapperProps) => {
   const ref = useRef<HTMLDivElement>(null);
 
   const registerNodeDimensions = useSetAtom(registerNodeDimensionsAtom);

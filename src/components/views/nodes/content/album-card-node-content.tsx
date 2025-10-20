@@ -1,25 +1,28 @@
 import { useAtomValue } from "jotai";
 import { GitGraph, ZoomIn } from "lucide-react";
 import { memo } from "react";
-import { getAlbumCoverUrl } from "../data/album-cover-urls";
-import { albumDataSelectorsAtom } from "../data/albums-pool-atoms";
-import { ViewNode, type ViewNodeBase } from "./view-node";
-import type { AlbumContext } from "./views/nodes/view-nodes-manager";
+import { getAlbumCoverUrl } from "../../../../data/album-cover-urls";
+import { albumDataSelectorsAtom } from "../../../../data/albums-pool-atoms";
 import {
   isViewActionsForKey,
   transitioningNodesFamily,
   type ViewActionsAtomOutput,
   type ViewKey,
-} from "./views/views-config";
+} from "../../views-config";
+import type { AlbumContext } from "../view-nodes-manager";
+import {
+  NodeContentWrapper,
+  type NodeContentWrapperPropsBase,
+} from "./node-content-wrapper";
 
 type AlbumCardProps = {
   viewActions: ViewActionsAtomOutput<ViewKey> | null;
   context: AlbumContext;
-} & ViewNodeBase;
+} & NodeContentWrapperPropsBase;
 
 export type AlbumCardVariant = "flowchart" | "albumsForArtist";
 
-export const AlbumCard = memo(function AlbumCard({
+export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
   viewActions,
   context,
   ...graphNodeProps
@@ -41,7 +44,7 @@ export const AlbumCard = memo(function AlbumCard({
   const { variant } = contextWithBackup.data;
 
   return (
-    <ViewNode {...graphNodeProps}>
+    <NodeContentWrapper {...graphNodeProps}>
       <div className="flex min-h-20 w-32 min-w-32 flex-col items-center gap-2">
         <div className="h-32 max-h-32 overflow-hidden">
           <img
@@ -122,6 +125,6 @@ export const AlbumCard = memo(function AlbumCard({
           </>
         )}
       </div>
-    </ViewNode>
+    </NodeContentWrapper>
   );
 });

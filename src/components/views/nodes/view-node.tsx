@@ -1,14 +1,14 @@
 import { animate, frame } from "motion";
 import { motion, useMotionValue } from "motion/react";
 import { useLayoutEffect, useRef } from "react";
-import { AlbumCard } from "../../AlbumCard";
-import { ArtistCard } from "../../ArtistCard";
-import { GenreCardReact } from "../../GenreCard";
 import type {
   PositionedNode,
   ViewActionsAtomOutput,
   ViewKey,
 } from "../views-config";
+import { AlbumCardNodeContent } from "./content/album-card-node-content";
+import { ArtistCardNodeContent } from "./content/artist-card-node-content";
+import { GenreCardNodeContent } from "./content/genre-card-node-content";
 import type { ViewNodeDef } from "./view-nodes-manager";
 
 export type ViewNodeProps = {
@@ -96,20 +96,20 @@ export const ViewNodeContent = ({
   viewActions,
 }: ViewNodeContentProps) => {
   return nodeDef.context.type === "artist" ? (
-    <ArtistCard
+    <ArtistCardNodeContent
       context={nodeDef.context}
       nodeId={nodeDef.id}
       positioned={hasPosition}
     />
   ) : nodeDef.context.type === "album" ? (
-    <AlbumCard
+    <AlbumCardNodeContent
       nodeId={nodeDef.id}
       positioned={hasPosition}
       viewActions={viewActions}
       context={nodeDef.context}
     />
   ) : nodeDef.context.type === "genre" ? (
-    <GenreCardReact
+    <GenreCardNodeContent
       genreName={nodeDef.context.data.name}
       nodeId={nodeDef.id}
       positioned={hasPosition}

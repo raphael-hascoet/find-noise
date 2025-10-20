@@ -1,14 +1,17 @@
 import { useAtomValue } from "jotai";
 import { memo } from "react";
-import { ViewNode, type ViewNodeBase } from "./view-node";
-import type { ArtistContext } from "./views/nodes/view-nodes-manager";
-import { transitioningNodesFamily } from "./views/views-config";
+import { transitioningNodesFamily } from "../../views-config";
+import type { ArtistContext } from "../view-nodes-manager";
+import {
+  NodeContentWrapper,
+  type NodeContentWrapperPropsBase,
+} from "./node-content-wrapper";
 
 type ArtistCardProps = {
   context: ArtistContext;
-} & ViewNodeBase;
+} & NodeContentWrapperPropsBase;
 
-export const ArtistCard = memo(function ArtistCard({
+export const ArtistCardNodeContent = memo(function ArtistCardNodeContent({
   context,
   ...graphNodeProps
 }: ArtistCardProps) {
@@ -18,10 +21,10 @@ export const ArtistCard = memo(function ArtistCard({
   const contextWithBackup = context ?? transitioningNode?.nodeDef.context;
 
   return (
-    <ViewNode {...graphNodeProps}>
+    <NodeContentWrapper {...graphNodeProps}>
       <span className="text-center font-sans text-sm text-gray-300">
         {contextWithBackup.data.name}
       </span>
-    </ViewNode>
+    </NodeContentWrapper>
   );
 });
