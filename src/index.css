@@ -4,7 +4,10 @@
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #303030;
+  background-color: #101010;
+
+  --subtle-gray-gradient:
+    133deg, rgba(30, 41, 57, 1) 0%, rgba(39, 41, 48, 1) 100%;
 }
 
 body {
@@ -19,17 +22,17 @@ body {
 
   @keyframes float-y {
     0% {
-      transform: translateY(-1.5px);
+      transform: translateY(-0.5px);
       /* easing for 0% → 50% */
       animation-timing-function: cubic-bezier(0.45, 0.05, 0.55, 0.95);
     }
     50% {
-      transform: translateY(1.5px);
+      transform: translateY(0.5px);
       /* easing for 50% → 100% */
       animation-timing-function: cubic-bezier(0.45, 0.05, 0.55, 0.95);
     }
     100% {
-      transform: translateY(-1.5px);
+      transform: translateY(-0.5px);
     }
   }
 }

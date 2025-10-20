@@ -19,8 +19,8 @@ export const InitWrapper: React.FC<React.PropsWithChildren> = ({
     init("/albums-data.jsonl");
   }, [init]);
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return null;
   if (error) return <div>Error: {error}</div>;
-  if (!hasLoaded) return <div>No albums loaded</div>;
+  if (!hasLoaded) return null;
   return <>{children}</>;
 };
