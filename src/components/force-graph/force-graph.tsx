@@ -1,14 +1,18 @@
 import * as d3 from "d3";
 import { useAtomValue, useSetAtom } from "jotai";
 import { ZoomIn, ZoomOut } from "lucide-react";
-import { animate } from "motion";
-import { AnimatePresence, motion, useMotionValue } from "motion/react";
+import { animate, frame } from "motion";
+import {
+  AnimatePresence,
+  motion,
+  useMotionValue,
+  useTransform,
+} from "motion/react";
 import {
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
-  useState,
   type RefObject,
 } from "react";
 import { D3SvgRenderer } from "../../d3/renderer";
@@ -76,10 +80,10 @@ const ForceGraphContent = function ({
   const svgRef = useRef<SVGSVGElement>(null);
   const d3ZoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown>>(null);
   const rendererRef = useRef<D3SvgRenderer | null>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
   const links = useAtomValue(calculatedLinksAtom);
 
-  // const initForceGraphDimensions = useSetAtom(initForceGraphDimensionsAtom);
   const setActiveView = useSetAtom(setActiveViewAtom);
   const setTransitionNodes = useSetAtom(transitioningNodesAtom);
 
@@ -134,9 +138,12 @@ const ForceGraphContent = function ({
       .attr("stroke-linecap", "round");
   }, []);
 
-  // Initial transform: center content with some padding and scale to 0.5
-  const [transform, setTransform] = useState(
-    d3.zoomIdentity.translate(width * 0.2, height * 0.15).scale(0.5),
+  const tx = useMotionValue(0);
+  const ty = useMotionValue(0);
+  const tk = useMotionValue(1);
+
+  const overlayTransform = useTransform(
+    () => `translate(${tx.get()}px, ${ty.get()}px) scale(${tk.get()})`,
   );
 
   useEffect(() => {
@@ -145,7 +152,12 @@ const ForceGraphContent = function ({
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 4])
-      .on("zoom", (e) => setTransform(e.transform));
+      .on("zoom", (e) => {
+        const t = e.transform;
+        tx.set(t.x);
+        ty.set(t.y);
+        tk.set(t.k);
+      });
 
     d3ZoomRef.current = zoom;
     zoomRoot.call(zoom);
@@ -156,8 +168,6 @@ const ForceGraphContent = function ({
       .scale(0.5);
     zoomRoot.call(zoom.transform, initialTransform);
   }, []);
-
-  console.log({ positioningState });
 
   const visiblePositionedNodes =
     positioningState.state === "ready"
@@ -179,30 +189,45 @@ const ForceGraphContent = function ({
         }}
       >
         {showDebugGrid && (
-          <DebugGrid width={width} height={height} transform={transform} />
+          <motion.g
+            style={{
+              transform: overlayTransform,
+              transformBox: "unset",
+              originX: 0,
+              originY: 0,
+            }}
+          >
+            <DebugGrid width={2000} height={2000} />
+          </motion.g>
         )}
         {visiblePositionedNodes && (
-          <g
-            transform={`translate(${transform.x}, ${transform.y}) scale(${transform.k})`}
+          <motion.g
+            style={{
+              transform: overlayTransform,
+              transformBox: "unset",
+              originX: 0,
+              originY: 0,
+            }}
           >
             <ForceGraphLinks
               links={links}
               positionedNodes={visiblePositionedNodes}
             />
-          </g>
+          </motion.g>
         )}
       </svg>
-      <div
+      <motion.div
         style={{
           position: "absolute",
           inset: 0,
           pointerEvents: "none",
-          transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.k})`,
           transformOrigin: "0 0",
           padding: "8px",
           top: "0",
           left: "0",
+          transform: overlayTransform,
         }}
+        ref={overlayRef}
       >
         <AnimatePresence
           mode="popLayout"
@@ -238,7 +263,7 @@ const ForceGraphContent = function ({
               },
             )}
         </AnimatePresence>
-      </div>
+      </motion.div>
       <div className="fixed right-2 bottom-2 flex gap-2 border-gray-800 bg-amber-900 p-2">
         <button
           className="cursor-pointer rounded-full bg-gray-800 p-2 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
@@ -321,44 +346,42 @@ const NodeContent = ({
 const DebugGrid = ({
   width,
   height,
-  transform,
   gridSize = 100,
 }: {
   width: number;
   height: number;
-  transform: d3.ZoomTransform;
   gridSize?: number;
 }) => {
   const lines: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
 
   // Calculate the visible range in graph coordinates (before transform)
-  const startX = Math.floor(-transform.x / gridSize) * gridSize;
-  const endX = Math.ceil((width - transform.x) / gridSize) * gridSize;
-  const startY = Math.floor(-transform.y / gridSize) * gridSize;
-  const endY = Math.ceil((height - transform.y) / gridSize) * gridSize;
+  const startX = 0;
+  const endX = width * gridSize;
+  const startY = 0;
+  const endY = height * gridSize;
 
   // Vertical lines - at every gridSize in graph space
   for (let x = startX; x <= endX; x += gridSize) {
     lines.push({
-      x1: x + transform.x,
-      y1: startY + transform.y,
-      x2: x + transform.x,
-      y2: endY + transform.y,
+      x1: x,
+      y1: startY,
+      x2: x,
+      y2: endY,
     });
   }
 
   // Horizontal lines - at every gridSize in graph space
   for (let y = startY; y <= endY; y += gridSize) {
     lines.push({
-      x1: startX + transform.x,
-      y1: y + transform.y,
-      x2: endX + transform.x,
-      y2: y + transform.y,
+      x1: startX,
+      y1: y,
+      x2: endX,
+      y2: y,
     });
   }
 
   return (
-    <g>
+    <>
       {lines.map((line, i) => (
         <line
           key={i}
@@ -370,7 +393,7 @@ const DebugGrid = ({
           strokeWidth={1}
         />
       ))}
-    </g>
+    </>
   );
 };
 
@@ -387,22 +410,20 @@ function NodeMotion({
 }) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-  const prev = useRef<{ left: number; top: number } | null>(null);
+  const prev = useRef<{ left: number; top: number }>({ left, top });
 
-  if (nodeId === "22d4ddbb-0161-4754-a8d0-5e0bd0d45f61") {
-    console.log({ left, top, children });
-  }
   useLayoutEffect(() => {
-    if (prev.current) {
-      console.log({ prev: prev.current });
-      const dx = prev.current.left - left;
-      const dy = prev.current.top - top;
+    if (left !== prev.current.left || top !== prev.current.top) {
+      const dx = prev.current.left - left + x.get();
+      const dy = prev.current.top - top + y.get();
       x.set(dx);
       y.set(dy);
-      animate(x, 0, { duration: 0.6, ease: [0.22, 1, 0.36, 1] });
-      animate(y, 0, { duration: 0.6, ease: [0.22, 1, 0.36, 1] });
+      frame.render(() => {
+        animate(x, 0, { duration: 0.6, ease: [0.22, 1, 0.36, 1] });
+        animate(y, 0, { duration: 0.6, ease: [0.22, 1, 0.36, 1] });
+      });
+      prev.current = { left, top };
     }
-    prev.current = { left, top };
   }, [left, top, x, y]);
 
   return (
@@ -410,13 +431,15 @@ function NodeMotion({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ opacity: { duration: 0.6, ease: "easeOut" } }}
+      transition={{
+        opacity: { duration: 0.6, ease: "easeOut" },
+      }}
       style={{
         position: "absolute",
         left,
         top,
-        x,
-        y,
+        x: x,
+        y: y,
         transformOrigin: "top left",
         pointerEvents: "auto",
       }}

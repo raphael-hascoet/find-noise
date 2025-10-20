@@ -7,10 +7,10 @@ function DrawArea() {
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        height: "100vh",
-        maxHeight: "100vh",
-        width: "100vw",
-        maxWidth: "100vw",
+        height: "100dvh",
+        maxHeight: "100dvh",
+        width: "100dvw",
+        maxWidth: "100dvw",
         position: "relative",
         padding: "16px",
       }}
@@ -22,7 +22,7 @@ function DrawArea() {
           position: "relative",
         }}
       >
-        <ForceGraph width={1600} height={1200} showDebugGrid />
+        <ForceGraph showDebugGrid />
       </div>
     </div>
   );

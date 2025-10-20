@@ -1,15 +1,11 @@
 import { atom, useAtomValue } from "jotai";
-import { animate, motion, useMotionValue } from "motion/react";
+import { animate, frame, motion, useMotionValue } from "motion/react";
+import { Fragment, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
-  Fragment,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import type { SimpleReason } from "../../data/get-albums-recommendations";
+  getTagsFromReasoning,
+  TagCloud,
+  type TagDef,
+} from "./force-graph-tags";
 import type { PositionedNode } from "./force-graph-views";
 
 type Link = {
@@ -22,7 +18,7 @@ export type Position = {
   y: number;
 };
 
-type LinkLineDef = {
+export type LinkLineDef = {
   start: Position;
   end: Position;
   isArrow: boolean;
@@ -33,7 +29,7 @@ type LinkLineDef = {
 const isLinkLineDefWithTags = (def: LinkLineDef): def is LinkLineDefWithTags =>
   !!def.tags;
 
-type LinkLineDefWithTags = LinkLineDef & { tags: TagDef };
+export type LinkLineDefWithTags = LinkLineDef & { tags: TagDef };
 
 type LinkEndpoints = {
   drawOrderedLines: {
@@ -114,8 +110,8 @@ export const lastExpandDiffAtom = atom<SegmentDiff | null>(null);
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 // Editable timings
-const REVEAL_DURATION = 0.5; // seconds for the stroke reveal per line
-const MOVE_DURATION = 0.28; // seconds for endpoint tween when layout changes
+const REVEAL_DURATION = 0.3; // seconds for the stroke reveal per line
+const MOVE_DURATION = 0.6; // seconds for endpoint tween when layout changes
 
 export function AnimatedLink({ drawOrderedLines }: LinkEndpoints) {
   // Flatten with group membership and lengths
@@ -207,13 +203,13 @@ export function AnimatedLink({ drawOrderedLines }: LinkEndpoints) {
           <AnimatedSegment
             key={seg.segmentId}
             seg={seg}
-            //   len={len}
             canReveal={gIdx <= activeGroup}
             isNew={!seenSet.has(seg.segmentId)}
             onRevealDone={() => handleRevealDone(gIdx)}
             moveDuration={MOVE_DURATION}
             revealDuration={REVEAL_DURATION}
             ease={EASE as [number, number, number, number]}
+            gIdx={gIdx}
           />
           {isLinkLineDefWithTags(seg) && <TagCloud lineDef={seg} />}
         </Fragment>
@@ -224,53 +220,43 @@ export function AnimatedLink({ drawOrderedLines }: LinkEndpoints) {
 
 function AnimatedSegment({
   seg,
-  //   len,
   canReveal,
   isNew,
   onRevealDone,
   moveDuration,
   revealDuration,
   ease,
+  gIdx,
 }: {
   seg: LinkLineDef;
-  //   len: number;
   canReveal: boolean;
   isNew: boolean;
   onRevealDone: () => void;
   moveDuration: number;
   revealDuration: number;
+  gIdx: number;
   ease: [number, number, number, number];
 }) {
-  //   const [seenSet, setSeenSet] = useAtom(seenSegmentsAtom);
-
-  console.log({ seg, canReveal });
-
-  // Mark as seen the first time we actually start its reveal
-  //   useEffect(() => {
-  //     if (!(isNew && canReveal)) return;
-  //     console.log("Segment seen", { seg });
-  //     setSeenSet((prev) => {
-  //       if (prev.has(seg.segmentId)) return prev;
-  //       const next = new Set(prev);
-  //       next.add(seg.segmentId);
-  //       return next;
-  //     });
-  //   }, [isNew, canReveal, seg.segmentId, setSeenSet]);
-
   // Motion values for smooth endpoint updates
   const x1 = useMotionValue(seg.start.x);
   const y1 = useMotionValue(seg.start.y);
   const x2 = useMotionValue(seg.end.x);
   const y2 = useMotionValue(seg.end.y);
 
+  const appearanceDelay = gIdx === 0 ? 0.6 : 0;
+
+  console.log({ gIdx });
+
   // Tween endpoints whenever coordinates change
-  useEffect(() => {
-    void Promise.all([
-      animate(x1, seg.start.x, { duration: moveDuration, ease }).finished,
-      animate(y1, seg.start.y, { duration: moveDuration, ease }).finished,
-      animate(x2, seg.end.x, { duration: moveDuration, ease }).finished,
-      animate(y2, seg.end.y, { duration: moveDuration, ease }).finished,
-    ]);
+  useLayoutEffect(() => {
+    frame.render(() => {
+      void Promise.all([
+        animate(x1, seg.start.x, { duration: moveDuration, ease }).finished,
+        animate(y1, seg.start.y, { duration: moveDuration, ease }).finished,
+        animate(x2, seg.end.x, { duration: moveDuration, ease }).finished,
+        animate(y2, seg.end.y, { duration: moveDuration, ease }).finished,
+      ]);
+    });
   }, [
     seg.start.x,
     seg.start.y,
@@ -295,11 +281,18 @@ function AnimatedSegment({
       strokeLinecap="round"
       markerEnd={seg.isArrow ? "url(#link-arrow)" : undefined}
       style={{ pointerEvents: "none" }}
-      initial={{ pathLength: 0 }}
-      animate={{ pathLength: canReveal ? 1 : 0 }}
+      initial={{ pathLength: 0, opacity: 0 }}
+      animate={{ pathLength: canReveal ? 1 : 0, opacity: canReveal ? 1 : 0 }}
       transition={{
-        duration: revealDuration,
-        ease,
+        opacity: {
+          duration: 0,
+          delay: appearanceDelay,
+        },
+        pathLength: {
+          delay: appearanceDelay,
+          duration: revealDuration,
+          ease,
+        },
       }}
       onUpdate={() => {
         // no-op; Framer drives the dash animation
@@ -312,212 +305,6 @@ function AnimatedSegment({
     />
   );
 }
-
-const X_TAG_CENTER_SPACING = 65;
-const Y_TAG_CENTER_SPACING = 20;
-
-type TagSidePosition =
-  | "top-left"
-  | "top-right"
-  | "bottom-left"
-  | "bottom-right";
-
-const TagCloud = ({ lineDef }: { lineDef: LinkLineDefWithTags }) => {
-  const calculatedFontSizesRef = useRef<
-    Map<TagSidePosition, { fontSize: number; length: number }>
-  >(new Map());
-
-  const [calculatedFontSizesDone, setCalculatedFontSizesDone] =
-    useState<Map<TagSidePosition, { fontSize: number; length: number }>>();
-
-  const lineDefMiddlePos = useMemo(
-    () => ({
-      x: (lineDef.end.x + lineDef.start.x) / 2,
-      y: (lineDef.end.y + lineDef.start.y) / 2,
-    }),
-    [lineDef],
-  );
-
-  const shellTagProps: ShellTagProps[] = useMemo(() => {
-    return lineDef.tags.map((tag, index) => {
-      const sideX: "left" | "right" = index % 2 === 0 ? "left" : "right";
-      const sideY: "top" | "bottom" = index < 2 ? "top" : "bottom";
-
-      return {
-        centerPos: lineDefMiddlePos,
-        tag,
-        id: `${sideY}-${sideX}`,
-        sides: {
-          x: sideX,
-          y: sideY,
-        },
-      };
-    });
-  }, [lineDef]);
-
-  const onDimensionFound = useCallback(
-    (id: TagSidePosition, dimensions: { fontSize: number; length: number }) => {
-      if (!!calculatedFontSizesDone) {
-        return;
-      }
-
-      calculatedFontSizesRef.current.set(id, dimensions);
-      if (calculatedFontSizesRef.current.size === shellTagProps.length) {
-        setCalculatedFontSizesDone(calculatedFontSizesRef.current);
-      }
-    },
-    [calculatedFontSizesDone],
-  );
-
-  const tagProps = useMemo(() => {
-    if (!calculatedFontSizesDone) return null;
-
-    return shellTagProps.map(
-      ({ id, tag }): FloatingTagProps => ({
-        basePos: {
-          x:
-            id === "top-left" || id === "bottom-left"
-              ? lineDefMiddlePos.x -
-                (X_TAG_CENTER_SPACING +
-                  calculatedFontSizesDone.get(id)!.length / 2)
-              : lineDefMiddlePos.x +
-                (X_TAG_CENTER_SPACING -
-                  calculatedFontSizesDone.get(id)!.length / 2),
-          y:
-            id === "top-left" || id === "top-right"
-              ? lineDefMiddlePos.y -
-                Y_TAG_CENTER_SPACING -
-                (TAG_MAX_FONT_SIZE -
-                  calculatedFontSizesDone.get(id)!.fontSize) /
-                  2
-              : lineDefMiddlePos.y +
-                Y_TAG_CENTER_SPACING +
-                (TAG_MAX_FONT_SIZE -
-                  calculatedFontSizesDone.get(id)!.fontSize) /
-                  2,
-        },
-        fontSize: calculatedFontSizesDone.get(id)!.fontSize,
-        tag: tag,
-        id,
-      }),
-    );
-  }, [shellTagProps, calculatedFontSizesDone]);
-
-  if (!tagProps) {
-    return (
-      <>
-        {shellTagProps.map((props) => (
-          <ShellTag
-            key={`shell-${props.id}}`}
-            id={props.id}
-            label={props.tag.label}
-            onDimensionFound={onDimensionFound}
-          />
-        ))}
-      </>
-    );
-  }
-
-  return (
-    <>
-      {tagProps.map((props) => (
-        <FloatingTag key={props.id} {...props} />
-      ))}
-    </>
-  );
-};
-
-const TAG_MAX_WIDTH = 100;
-
-const TAG_MAX_FONT_SIZE = 14;
-
-type ShellTagProps = {
-  centerPos: Position;
-  tag: TagDef;
-  id: TagSidePosition;
-  sides: {
-    x: "left" | "right";
-    y: "top" | "bottom";
-  };
-};
-
-const ShellTag = ({
-  label,
-  id,
-  onDimensionFound,
-}: {
-  id: TagSidePosition;
-  label: string;
-  onDimensionFound: (
-    id: TagSidePosition,
-    dimensions: { fontSize: number; length: number },
-  ) => void;
-}) => {
-  const isDimensionFound = useRef(false);
-
-  const textRef = useRef<SVGTextElement>(null);
-
-  useLayoutEffect(() => {
-    if (!textRef.current || isDimensionFound.current) return;
-
-    const el = textRef.current;
-
-    let fontSize: number;
-    let finalLength: number;
-
-    const computedLength = el.getComputedTextLength();
-
-    if (computedLength <= TAG_MAX_WIDTH) {
-      fontSize = TAG_MAX_FONT_SIZE;
-      finalLength = computedLength;
-    } else {
-      const fontWidthRatio = TAG_MAX_FONT_SIZE / computedLength;
-
-      fontSize = Math.floor(fontWidthRatio * TAG_MAX_WIDTH);
-      finalLength = fontSize / fontWidthRatio;
-    }
-
-    onDimensionFound(id, { fontSize, length: finalLength });
-    isDimensionFound.current = true;
-  }, [textRef]);
-
-  return (
-    <motion.text
-      x={0}
-      y={0}
-      opacity={0}
-      ref={textRef}
-      fontSize={`${TAG_MAX_FONT_SIZE}`}
-    >
-      {label}
-    </motion.text>
-  );
-};
-
-type FloatingTagProps = {
-  basePos: Position;
-  fontSize: number;
-  tag: TagDef;
-  id: TagSidePosition;
-};
-
-const FloatingTag = ({ basePos, tag, fontSize }: FloatingTagProps) => {
-  const x = useMotionValue(basePos.x);
-  const y = useMotionValue(basePos.y);
-
-  useEffect(() => {
-    void Promise.all([
-      animate(x, basePos.x, { duration: MOVE_DURATION, ease: EASE }).finished,
-      animate(y, basePos.y, { duration: MOVE_DURATION, ease: EASE }).finished,
-    ]);
-  }, [basePos.x, basePos.y]);
-
-  return (
-    <motion.text fill={tag.color} x={x} y={y} fontSize={fontSize}>
-      {tag.label}
-    </motion.text>
-  );
-};
 
 // Calculate link endpoints with edge-aware positioning (from original component)
 const calculateLinkEndpoints = ({
@@ -624,116 +411,3 @@ const calculateLinkEndpoints = ({
     ],
   };
 };
-
-type TagDef = {
-  color: string;
-  label: string;
-};
-
-const TAG_REASONING_ORDER = {
-  genres: {
-    primaryToPrimaryGenre: 1,
-    primaryToSecondaryGenre: 2,
-    secondaryToSecondaryGenre: 3,
-  },
-} as const;
-
-const DEFAULT_COLOR = "#ccc";
-
-const MAX_TAGS_COUNT = 4;
-
-const getTagsFromReasoning = (
-  reasoning: SimpleReason,
-  opts?: { rngSeed?: string },
-): TagDef[] => {
-  const genreTags: { def: TagDef; order: number }[] = [];
-
-  if (reasoning.genreMatches.primaryPrimary.shared.length) {
-    reasoning.genreMatches.primaryPrimary.shared.forEach((genre) =>
-      genreTags.push({
-        order: TAG_REASONING_ORDER.genres.primaryToPrimaryGenre,
-        def: {
-          color: DEFAULT_COLOR, // TODO: Apply color fitting genres/descriptors
-          label: genre,
-        },
-      }),
-    );
-  }
-
-  if (reasoning.genreMatches.primarySecondary.shared.length) {
-    reasoning.genreMatches.primarySecondary.shared.forEach((genre) =>
-      genreTags.push({
-        order: TAG_REASONING_ORDER.genres.primaryToSecondaryGenre,
-        def: {
-          color: DEFAULT_COLOR,
-          label: genre,
-        },
-      }),
-    );
-  }
-
-  if (reasoning.genreMatches.secondaryPrimary.shared.length) {
-    reasoning.genreMatches.secondaryPrimary.shared.forEach((genre) =>
-      genreTags.push({
-        order: TAG_REASONING_ORDER.genres.primaryToSecondaryGenre,
-        def: {
-          color: DEFAULT_COLOR,
-          label: genre,
-        },
-      }),
-    );
-  }
-
-  if (reasoning.genreMatches.secondarySecondary.shared.length) {
-    reasoning.genreMatches.secondarySecondary.shared.forEach((genre) =>
-      genreTags.push({
-        order: TAG_REASONING_ORDER.genres.secondaryToSecondaryGenre,
-        def: {
-          color: DEFAULT_COLOR,
-          label: genre,
-        },
-      }),
-    );
-  }
-
-  const genreTagsSorted = genreTags
-    .sort(({ order: order1 }, { order: order2 }) => order1 - order2)
-    .map(({ def }) => def);
-
-  const genreTagsSet = new Set<string>();
-
-  const genreTagsWithoutDoubles: TagDef[] = [];
-
-  genreTagsSorted.forEach((tag) => {
-    if (!genreTagsSet.has(tag.label)) {
-      genreTagsWithoutDoubles.push(tag);
-      genreTagsSet.add(tag.label);
-    }
-  });
-
-  const genreTagsShown = genreTagsWithoutDoubles.slice(0, 2);
-
-  const descriptorTags: TagDef[] = reasoning.descriptorOverlap.shared
-    .map((descriptor) => {
-      return {
-        color: DEFAULT_COLOR,
-        label: descriptor,
-      };
-    })
-    .map((value) => ({ value, sort: seededRandom(opts?.rngSeed ?? "seed") }))
-    .sort((a, b) => a.sort - b.sort)
-    .map(({ value }) => value)
-    .slice(0, MAX_TAGS_COUNT - genreTagsShown.length);
-
-  return [...genreTagsShown, ...descriptorTags];
-};
-
-function seededRandom(str: string) {
-  console.log({ str });
-  let h = 0x811c9dc5; // FNV offset basis
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 0x01000193); // FNV prime
-  }
-  return h >>> 0;
-}
