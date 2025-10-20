@@ -1,4 +1,6 @@
 import * as d3 from "d3";
+import { atom, useSetAtom, type Atom } from "jotai";
+import { albumDataSelectorsAtom } from "../../../data/albums-pool-atoms";
 import {
   simpleRecommendAlbums,
   type SimpleRecommendParams,
@@ -10,9 +12,15 @@ import {
   removeChildrenFromNodeInTree,
   type ViewNodeDef,
 } from "../../nodes/view-nodes-manager";
-import type { NodeDefWithDimensions, ViewBuilder } from "../views-config";
+import {
+  activeViewConfigReadOnlyAtom,
+  setActiveViewAtom,
+  type NodeDefWithDimensions,
+  type ViewBuilder,
+  type ViewConfig,
+} from "../views-config";
 
-export const flowchartView: ViewBuilder<"flowchart"> = {
+export const flowchartView: Atom<ViewBuilder<"flowchart">> = atom({
   buildNodes: ({ data, selectors }) => {
     const { albumMbid, nodeTree } = data;
 
@@ -179,89 +187,125 @@ export const flowchartView: ViewBuilder<"flowchart"> = {
     return positionMap;
   },
 
-  buildActions: ({ changeView, selectors, data }) => {
-    return {
-      transitionToAlbumsForArtist: ({ artistId }: { artistId: string }) => {
-        changeView("albumsForArtist", { artistId });
-      },
-      addRecommendationsToNode: ({
-        albumMbid,
-        params,
-      }: {
-        albumMbid: string;
-        params: Omit<SimpleRecommendParams, "seed" | "all">;
-      }) => {
-        const seed = selectors.byMbid(albumMbid);
-        if (!seed) return;
-
-        let existingIds: string[] | undefined = undefined;
-        if (data.nodeTree) {
-          const flattenedTree = flattenNodeTreeToMap(data.nodeTree);
-          existingIds = Array.from(flattenedTree.keys());
-        }
-
-        const albums = selectors.allAlbums();
-
-        const recommendations = simpleRecommendAlbums({
-          ...params,
-          seed,
-          all: albums,
-          excludedIds: existingIds,
-        });
-        const currentRoot: ViewNodeDef =
-          data.nodeTree ??
-          ({
-            id: data.albumMbid,
-            context: {
-              type: "album",
-              data: {
-                artist: seed["artist-mbid"],
-                title: seed.release,
-                variant: "flowchart",
-              },
-            },
-          } as ViewNodeDef);
-
-        const newChildren: ViewNodeDef[] = recommendations.map(
-          (rec) =>
-            ({
-              id: rec.album.mbid,
-              context: {
-                type: "album",
-                data: {
-                  artist: rec.album["artist-mbid"],
-                  title: rec.album.release,
-                  variant: "flowchart",
-                  recommendation: {
-                    reason: rec.reason,
-                    score: rec.score,
-                  },
-                },
-              },
-            }) as ViewNodeDef,
-        );
-
-        const updated = addChildrenToNodeInTree(
-          currentRoot,
-          albumMbid,
-          newChildren,
-        );
-        changeView("flowchart", { ...data, nodeTree: updated });
-      },
-      removeChildrenFromNode: ({ parentId, childIds }) => {
-        if (!data.nodeTree) return;
-        const updated = removeChildrenFromNodeInTree(
-          data.nodeTree,
-          parentId,
-          childIds,
-        );
-        changeView("flowchart", { ...data, nodeTree: updated });
-      },
-    };
-  },
-
   transitionConfig: {
     duration: 800,
     ease: d3.easeCubicInOut,
   },
+});
+
+type AddRecommendationsToNodeParams = {
+  albumMbid: string;
+  params: Omit<SimpleRecommendParams, "seed" | "all">;
+};
+
+const flowchartViewActionsAtomGroup = {
+  addRecommendationsToNode: atom(
+    null,
+    (get, set, { albumMbid, params }: AddRecommendationsToNodeParams) => {
+      const view = get(activeViewConfigReadOnlyAtom);
+
+      if (!view || view.key !== "flowchart") {
+        throw new Error("Active view is not flowchart");
+      }
+
+      const { data } = view as ViewConfig<"flowchart">;
+
+      const selectors = get(albumDataSelectorsAtom);
+
+      const seed = selectors.byMbid(albumMbid);
+      if (!seed) return;
+      let existingIds: string[] | undefined = undefined;
+      if (data.nodeTree) {
+        const flattenedTree = flattenNodeTreeToMap(data.nodeTree);
+        existingIds = Array.from(flattenedTree.keys());
+      }
+      const albums = selectors.allAlbums();
+      const recommendations = simpleRecommendAlbums({
+        ...params,
+        seed,
+        all: albums,
+        excludedIds: existingIds,
+      });
+      const currentRoot: ViewNodeDef =
+        data.nodeTree ??
+        ({
+          id: data.albumMbid,
+          context: {
+            type: "album",
+            data: {
+              artist: seed["artist-mbid"],
+              title: seed.release,
+              variant: "flowchart",
+            },
+          },
+        } as ViewNodeDef);
+      const newChildren: ViewNodeDef[] = recommendations.map(
+        (rec) =>
+          ({
+            id: rec.album.mbid,
+            context: {
+              type: "album",
+              data: {
+                artist: rec.album["artist-mbid"],
+                title: rec.album.release,
+                variant: "flowchart",
+                recommendation: {
+                  reason: rec.reason,
+                  score: rec.score,
+                },
+              },
+            },
+          }) as ViewNodeDef,
+      );
+      const updated = addChildrenToNodeInTree(
+        currentRoot,
+        albumMbid,
+        newChildren,
+      );
+      set(setActiveViewAtom, {
+        key: "flowchart",
+        data: { ...data, nodeTree: updated },
+      });
+    },
+  ),
+  removeChildrenFromNode: atom(
+    null,
+    (
+      get,
+      set,
+      { parentId, childIds }: { parentId: string; childIds: string[] },
+    ) => {
+      const view = get(activeViewConfigReadOnlyAtom);
+
+      if (!view || view.key !== "flowchart") {
+        throw new Error("Active view is not flowchart");
+      }
+
+      const { data } = view as ViewConfig<"flowchart">;
+      if (!data.nodeTree) return;
+      const updated = removeChildrenFromNodeInTree(
+        data.nodeTree,
+        parentId,
+        childIds,
+      );
+      set(setActiveViewAtom, {
+        key: "flowchart",
+        data: { ...data, nodeTree: updated },
+      });
+    },
+  ),
+};
+
+export const useFlowchartViewActions = () => {
+  const addRecommendationsToNode = useSetAtom(
+    flowchartViewActionsAtomGroup.addRecommendationsToNode,
+  );
+  const removeChildrenFromNode = useSetAtom(
+    flowchartViewActionsAtomGroup.removeChildrenFromNode,
+  );
+
+  return {
+    addRecommendationsToNode,
+    removeChildrenFromNode,
+  };
 };

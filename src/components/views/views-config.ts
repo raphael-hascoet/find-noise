@@ -1,10 +1,10 @@
+import type { Atom } from "jotai";
 import { atom } from "jotai";
 import { atomFamily } from "jotai/utils";
 import {
   albumDataSelectorsAtom,
   type AlbumSelectors,
 } from "../../data/albums-pool-atoms";
-import type { SimpleRecommendParams } from "../../data/get-albums-recommendations";
 import type { Position } from "../flowchart/flowchart-links";
 import {
   loadedNodeDimensionsAtom,
@@ -13,36 +13,21 @@ import {
 import { type ViewNodeDef } from "../nodes/view-nodes-manager";
 import { viewBuilders } from "./view-builders";
 
-type ViewKeyToDefinition = {
+export type ViewKeyToDefinition = {
+  home: {
+    data: {
+      seed: string;
+    };
+  };
   albumsForArtist: {
     data: {
       artistId: string;
-    };
-    actions: {
-      transitionToFlowchart: ({ albumId }: { albumId: string }) => void;
     };
   };
   flowchart: {
     data: {
       albumMbid: string;
       nodeTree?: ViewNodeDef;
-    };
-    actions: {
-      transitionToAlbumsForArtist: ({ artistId }: { artistId: string }) => void;
-      addRecommendationsToNode?: ({
-        albumMbid,
-        params,
-      }: {
-        albumMbid: string;
-        params: Omit<SimpleRecommendParams, "seed" | "all">;
-      }) => void;
-      removeChildrenFromNode?: ({
-        parentId,
-        childIds,
-      }: {
-        parentId: string;
-        childIds: string[];
-      }) => void;
     };
   };
 };
@@ -51,10 +36,6 @@ export type ViewKey = keyof ViewKeyToDefinition;
 
 export type ViewData<T extends ViewKey> = T extends keyof ViewKeyToDefinition
   ? ViewKeyToDefinition[T]["data"]
-  : never;
-
-type ViewActions<T extends ViewKey> = T extends keyof ViewKeyToDefinition
-  ? ViewKeyToDefinition[T]["actions"]
   : never;
 
 export type ViewBuilder<Key extends ViewKey> = {
@@ -69,19 +50,13 @@ export type ViewBuilder<Key extends ViewKey> = {
     nodeDefsWithDimensions: Map<string, NodeDefWithDimensions>;
   }) => Map<string, Position>;
 
-  buildActions: (params: {
-    data: ViewData<Key>;
-    selectors: AlbumSelectors;
-    changeView: <K extends ViewKey>(key: K, data: ViewData<K>) => void;
-  }) => ViewActions<Key>;
-
   transitionConfig?: {
     duration: number;
     ease?: (t: number) => number;
   };
 };
 
-type ViewConfig<TKey extends ViewKey = ViewKey> = {
+export type ViewConfig<TKey extends ViewKey = ViewKey> = {
   key: TKey;
   data: ViewData<TKey>;
 };
@@ -141,7 +116,7 @@ export const nodePositioningStateAtom = atom((get): NodePositioningState => {
   if (!viewConfig) throw new Error("No view config found on active view");
   const selectors = get(albumDataSelectorsAtom);
 
-  const builder = viewBuilders[viewConfig.key];
+  const builder = get(viewBuilders[viewConfig.key] as Atom<ViewBuilder<any>>);
 
   const positions = builder.buildNodePositions({
     data: viewConfig.data as any,
@@ -166,7 +141,9 @@ export const nodePositioningStateAtom = atom((get): NodePositioningState => {
 });
 
 const activeViewConfigAtom = atom<ViewConfig | null>(null);
-const activeViewConfigReadOnlyAtom = atom((get) => get(activeViewConfigAtom));
+export const activeViewConfigReadOnlyAtom = atom((get) =>
+  get(activeViewConfigAtom),
+);
 
 const calculatedNodeDefsAtom = atom((get) => {
   const viewConfig = get(activeViewConfigAtom);
@@ -174,7 +151,7 @@ const calculatedNodeDefsAtom = atom((get) => {
 
   if (!viewConfig || !selectors) return null;
 
-  const builder = viewBuilders[viewConfig.key];
+  const builder = get(viewBuilders[viewConfig.key] as Atom<ViewBuilder<any>>);
   if (!builder) return null;
 
   return builder.buildNodes({
@@ -182,43 +159,6 @@ const calculatedNodeDefsAtom = atom((get) => {
     selectors,
   }) as Map<string, ViewNodeDef>;
 });
-
-export type ViewActionsAtomOutput<K extends ViewKey> = {
-  key: K;
-  actions: K extends keyof ViewKeyToDefinition
-    ? ViewKeyToDefinition[K]["actions"]
-    : never;
-};
-
-export const isViewActionsForKey = <K extends ViewKey>(
-  obj: ViewActionsAtomOutput<ViewKey> | null | undefined,
-  key: K,
-): obj is ViewActionsAtomOutput<K> => {
-  return obj?.key === key;
-};
-
-export const createViewActionsAtom = ({
-  changeView,
-}: {
-  changeView: <K extends ViewKey>(key: K, data: ViewData<K>) => void;
-}) => {
-  return atom((get) => {
-    const viewConfig = get(activeViewConfigAtom);
-    if (!viewConfig) return null;
-
-    const builder = viewBuilders[viewConfig.key];
-    if (!builder) return null;
-
-    return {
-      key: viewConfig.key,
-      actions: builder.buildActions({
-        data: viewConfig.data as any,
-        selectors: get(albumDataSelectorsAtom),
-        changeView,
-      }),
-    } as ViewActionsAtomOutput<ViewKey>;
-  });
-};
 
 export const setActiveViewAtom = atom(null, (get, set, config: ViewConfig) => {
   const currentPositioningState = get(nodePositioningStateAtom);

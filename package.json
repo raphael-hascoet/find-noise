@@ -20,6 +20,7 @@
     "react-dom": "^19.1.1",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.14",
+    "ulid": "^3.0.1",
     "zod": "^4.1.11"
   },
   "devDependencies": {
