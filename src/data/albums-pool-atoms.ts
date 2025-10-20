@@ -1,6 +1,6 @@
 import { atom } from "jotai";
 import { z } from "zod";
-import type { AlbumSelectors } from "../components/force-graph/force-graph-views";
+import type { AlbumSelectors } from "../components/views/views-config";
 
 export const AlbumSchema = z.object({
   id: z.string(),

@@ -5,8 +5,8 @@ import {
   getTagsFromReasoning,
   TagCloud,
   type TagDef,
-} from "./force-graph-tags";
-import type { PositionedNode } from "./force-graph-views";
+} from "./flowchart-tags";
+import type { PositionedNode } from "../views-config";
 
 type Link = {
   source: string;
@@ -37,7 +37,7 @@ type LinkEndpoints = {
   }[];
 };
 
-export const ForceGraphLinks = ({
+export const FlowchartLinks = ({
   links,
   positionedNodes,
 }: {
@@ -93,10 +93,10 @@ export const ForceGraphLinks = ({
   );
 };
 
-// Identifies the current graph instance; bump this to reset registries
-export const graphIdAtom = atom<string>("default-graph");
+// Identifies the current flowchart instance; bump this to reset registries
+export const flowchartIdAtom = atom<string>("default-flowchart");
 
-// Registry of segments that have completed initial reveal for the current graph
+// Registry of segments that have completed initial reveal for the current flowchart
 export const seenSegmentsAtom = atom<Set<string>>(new Set<string>());
 
 // Optional: per-expand diff (filled by your tree logic when expanding a node)
@@ -306,7 +306,7 @@ function AnimatedSegment({
   );
 }
 
-// Calculate link endpoints with edge-aware positioning (from original component)
+// Calculate link endpoints with edge-aware positioning for flowchart view
 const calculateLinkEndpoints = ({
   source,
   targets,

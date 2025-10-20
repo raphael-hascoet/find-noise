@@ -12,14 +12,14 @@ import {
 import {
   loadedNodeDimensionsAtom,
   type NodeDimensions,
-} from "./force-graph-dimensions";
-import type { Position } from "./force-graph-links";
+} from "./nodes/view-node-dimensions";
+import type { Position } from "./flowchart/flowchart-links";
 import {
   addChildrenToNodeInTree,
   flattenNodeTreeToMap,
   removeChildrenFromNodeInTree,
-  type ForceGraphNodeDef,
-} from "./force-graph-nodes-manager";
+  type ViewNodeDef,
+} from "./nodes/view-nodes-manager";
 
 // Album selectors type helper
 export type AlbumSelectors = {
@@ -47,7 +47,7 @@ type ViewKeyToDefinition = {
   flowchart: {
     data: {
       albumMbid: string;
-      nodeTree?: ForceGraphNodeDef;
+      nodeTree?: ViewNodeDef;
     };
     actions: {
       transitionToAlbumsForArtist: ({ artistId }: { artistId: string }) => void;
@@ -84,7 +84,7 @@ export type ViewBuilder<Key extends ViewKey> = {
   buildNodes: (params: {
     data: ViewData<Key>;
     selectors: AlbumSelectors;
-  }) => Map<string, ForceGraphNodeDef>;
+  }) => Map<string, ViewNodeDef>;
 
   buildNodePositions: (params: {
     data: ViewData<Key>;
@@ -122,10 +122,10 @@ export const viewBuilders = {
               type: "artist",
               data: { name: artistName },
             },
-          } as ForceGraphNodeDef,
+          } as ViewNodeDef,
         ],
         // Album nodes
-        ...albums.map((album): [string, ForceGraphNodeDef] => [
+        ...albums.map((album): [string, ViewNodeDef] => [
           album.mbid,
           {
             id: album.mbid,
@@ -220,7 +220,7 @@ export const viewBuilders = {
       // Otherwise create initial root-only tree
       const album = selectors.byMbid(albumMbid);
       if (!album) return new Map();
-      const root: ForceGraphNodeDef = {
+      const root: ViewNodeDef = {
         id: albumMbid,
         context: {
           type: "album",
@@ -313,7 +313,7 @@ export const viewBuilders = {
         originPos = { x: 0, y: 0 },
         depth = 0,
       }: {
-        nodeDef: ForceGraphNodeDef;
+        nodeDef: ViewNodeDef;
         originPos?: Position;
         depth?: number;
       }) => {
@@ -401,7 +401,7 @@ export const viewBuilders = {
             all: albums,
             excludedIds: existingIds,
           });
-          const currentRoot: ForceGraphNodeDef =
+          const currentRoot: ViewNodeDef =
             data.nodeTree ??
             ({
               id: data.albumMbid,
@@ -413,9 +413,9 @@ export const viewBuilders = {
                   variant: "flowchart",
                 },
               },
-            } as ForceGraphNodeDef);
+            } as ViewNodeDef);
 
-          const newChildren: ForceGraphNodeDef[] = recommendations.map(
+          const newChildren: ViewNodeDef[] = recommendations.map(
             (rec) =>
               ({
                 id: rec.album.mbid,
@@ -431,7 +431,7 @@ export const viewBuilders = {
                     },
                   },
                 },
-              }) as ForceGraphNodeDef,
+              }) as ViewNodeDef,
           );
 
           const updated = addChildrenToNodeInTree(
@@ -469,7 +469,7 @@ export type ViewConfig<TKey extends ViewKey = ViewKey> = {
 };
 
 type NodeDefWithDimensions = {
-  nodeDef: ForceGraphNodeDef;
+  nodeDef: ViewNodeDef;
   dimensions: NodeDimensions;
 };
 
@@ -482,7 +482,7 @@ export type NodePositioningState =
   | {
       state: "in-progress";
       transitionNodes?: Map<string, PositionedNode>;
-      targetNodeDefs: Map<string, ForceGraphNodeDef>;
+      targetNodeDefs: Map<string, ViewNodeDef>;
     }
   | {
       state: "ready";
@@ -565,7 +565,7 @@ export const calculatedNodeDefsAtom = atom((get) => {
   return builder.buildNodes({
     data: viewConfig.data as any,
     selectors,
-  }) as Map<string, ForceGraphNodeDef>;
+  }) as Map<string, ViewNodeDef>;
 });
 
 export type ViewActionsAtomOutput<K extends ViewKey> = {

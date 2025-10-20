@@ -1,9 +1,9 @@
 import type { SimpleRecommendation } from "../../data/get-albums-recommendations";
 import type { AlbumCardVariant } from "../AlbumCard";
 
-export type ForceGraphNodeDefBase = {
+export type ViewNodeDefBase = {
   id: string;
-  children?: ForceGraphNodeDef[];
+  children?: ViewNodeDef[];
   onZoomClick?: () => void;
 };
 
@@ -31,30 +31,30 @@ export type GenreContext = {
   };
 };
 
-export type ForceGraphNodeDefByType =
+export type ViewNodeDefByType =
   | ArtistContext
   | AlbumContext
   | GenreContext;
 
-export type ForceGraphNodeDef = ForceGraphNodeDefBase & {
-  context: ForceGraphNodeDefByType;
+export type ViewNodeDef = ViewNodeDefBase & {
+  context: ViewNodeDefByType;
 };
 
 // Pure utilities for recursive trees (immutable)
 export function flattenNodeTreeToMap(
-  root: ForceGraphNodeDef,
-  map: Map<string, ForceGraphNodeDef> = new Map(),
-): Map<string, ForceGraphNodeDef> {
+  root: ViewNodeDef,
+  map: Map<string, ViewNodeDef> = new Map(),
+): Map<string, ViewNodeDef> {
   map.set(root.id, root);
   root.children?.forEach((child) => flattenNodeTreeToMap(child, map));
   return map;
 }
 
 export function addChildrenToNodeInTree(
-  root: ForceGraphNodeDef,
+  root: ViewNodeDef,
   parentId: string,
-  newChildren: ForceGraphNodeDef[],
-): ForceGraphNodeDef {
+  newChildren: ViewNodeDef[],
+): ViewNodeDef {
   if (root.id === parentId) {
     return {
       ...root,
@@ -71,10 +71,10 @@ export function addChildrenToNodeInTree(
 }
 
 export function removeChildrenFromNodeInTree(
-  root: ForceGraphNodeDef,
+  root: ViewNodeDef,
   parentId: string,
   childIdsToRemove: string[],
-): ForceGraphNodeDef {
+): ViewNodeDef {
   if (root.id === parentId) {
     return {
       ...root,
@@ -91,9 +91,9 @@ export function removeChildrenFromNodeInTree(
 }
 
 export function findNodeInTree(
-  root: ForceGraphNodeDef,
+  root: ViewNodeDef,
   nodeId: string,
-): ForceGraphNodeDef | null {
+): ViewNodeDef | null {
   if (root.id === nodeId) return root;
   for (const c of root.children || []) {
     const found = findNodeInTree(c, nodeId);

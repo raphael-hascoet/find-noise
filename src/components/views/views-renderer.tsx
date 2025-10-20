@@ -20,11 +20,11 @@ import { albumDataSelectorsAtom } from "../../data/albums-pool-atoms";
 import { AlbumCard } from "../AlbumCard";
 import { ArtistCard } from "../ArtistCard";
 import { GenreCardReact } from "../GenreCard";
-import { ForceGraphLinks } from "./force-graph-links";
+import { FlowchartLinks } from "./flowchart/flowchart-links";
 import {
-  type ForceGraphNodeDef,
-  type ForceGraphNodeDefByType,
-} from "./force-graph-nodes-manager";
+  type ViewNodeDef,
+  type ViewNodeDefByType,
+} from "./nodes/view-nodes-manager";
 import {
   calculatedLinksAtom,
   createViewActionsAtom,
@@ -35,23 +35,23 @@ import {
   type ViewActionsAtomOutput,
   type ViewData,
   type ViewKey,
-} from "./force-graph-views";
+} from "./views-config";
 
-export type ForceGraphNode = {
+export type ViewNode = {
   id: string;
   onZoomClick?: () => void;
-  context: ForceGraphNodeDefByType;
+  context: ViewNodeDefByType;
 };
 
-type ForceGraphProps = {
+type ViewsRendererProps = {
   positioningState: NodePositioningState;
   width?: number;
   height?: number;
   showDebugGrid?: boolean;
 };
 
-export const ForceGraph = function (
-  props: Omit<ForceGraphProps, "positioningState">,
+export const ViewsRenderer = function (
+  props: Omit<ViewsRendererProps, "positioningState">,
 ) {
   const selectors = useAtomValue(albumDataSelectorsAtom);
   const setActiveView = useSetAtom(setActiveViewAtom);
@@ -68,15 +68,15 @@ export const ForceGraph = function (
     return null;
   }
 
-  return <ForceGraphContent positioningState={positioningState} {...props} />;
+  return <ViewsRendererContent positioningState={positioningState} {...props} />;
 };
 
-const ForceGraphContent = function ({
+const ViewsRendererContent = function ({
   positioningState,
   width = 800,
   height = 600,
   showDebugGrid = false,
-}: ForceGraphProps) {
+}: ViewsRendererProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const d3ZoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown>>(null);
   const rendererRef = useRef<D3SvgRenderer | null>(null);
@@ -209,7 +209,7 @@ const ForceGraphContent = function ({
               originY: 0,
             }}
           >
-            <ForceGraphLinks
+            <FlowchartLinks
               links={links}
               positionedNodes={visiblePositionedNodes}
             />
@@ -318,7 +318,7 @@ const NodeContent = ({
   viewActions,
 }: {
   hasPosition: boolean;
-  nodeDef: ForceGraphNodeDef;
+  nodeDef: ViewNodeDef;
   viewActions: ViewActionsAtomOutput<ViewKey> | null;
 }) => {
   return nodeDef.context.type === "artist" ? (

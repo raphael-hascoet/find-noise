@@ -1,15 +1,15 @@
 import { useSetAtom } from "jotai";
 import { useLayoutEffect, useRef, type PropsWithChildren } from "react";
-import { registerNodeDimensionsAtom } from "./force-graph/force-graph-dimensions";
+import { registerNodeDimensionsAtom } from "./views/nodes/view-node-dimensions";
 
-export type ForceGraphNodeBase = {
+export type ViewNodeBase = {
   nodeId: string;
   positioned: boolean;
 };
 
-type ForceGraphNodeProps = ForceGraphNodeBase & PropsWithChildren;
+type ViewNodeProps = ViewNodeBase & PropsWithChildren;
 
-export const ForceGraphNode = ({ nodeId, children }: ForceGraphNodeProps) => {
+export const ViewNode = ({ nodeId, children }: ViewNodeProps) => {
   const ref = useRef<HTMLDivElement>(null);
 
   const registerNodeDimensions = useSetAtom(registerNodeDimensionsAtom);

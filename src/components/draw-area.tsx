@@ -1,4 +1,4 @@
-import { ForceGraph } from "./force-graph/force-graph";
+import { ViewsRenderer } from "./views/views-renderer";
 
 function DrawArea() {
   return (
@@ -22,7 +22,7 @@ function DrawArea() {
           position: "relative",
         }}
       >
-        <ForceGraph showDebugGrid />
+        <ViewsRenderer showDebugGrid />
       </div>
     </div>
   );

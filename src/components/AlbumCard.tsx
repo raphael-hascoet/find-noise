@@ -3,19 +3,19 @@ import { GitGraph, ZoomIn } from "lucide-react";
 import { memo } from "react";
 import { getAlbumCoverUrl } from "../data/album-cover-urls";
 import { albumDataSelectorsAtom } from "../data/albums-pool-atoms";
-import { ForceGraphNode, type ForceGraphNodeBase } from "./force-graph-node";
-import type { AlbumContext } from "./force-graph/force-graph-nodes-manager";
+import { ViewNode, type ViewNodeBase } from "./view-node";
+import type { AlbumContext } from "./views/nodes/view-nodes-manager";
 import {
   isViewActionsForKey,
   transitioningNodesFamily,
   type ViewActionsAtomOutput,
   type ViewKey,
-} from "./force-graph/force-graph-views";
+} from "./views/views-config";
 
 type AlbumCardProps = {
   viewActions: ViewActionsAtomOutput<ViewKey> | null;
   context: AlbumContext;
-} & ForceGraphNodeBase;
+} & ViewNodeBase;
 
 export type AlbumCardVariant = "flowchart" | "albumsForArtist";
 
@@ -41,7 +41,7 @@ export const AlbumCard = memo(function AlbumCard({
   const { variant } = contextWithBackup.data;
 
   return (
-    <ForceGraphNode {...graphNodeProps}>
+    <ViewNode {...graphNodeProps}>
       <div className="flex min-h-20 w-32 min-w-32 flex-col items-center gap-2">
         <div className="h-32 max-h-32 overflow-hidden">
           <img
@@ -122,6 +122,6 @@ export const AlbumCard = memo(function AlbumCard({
           </>
         )}
       </div>
-    </ForceGraphNode>
+    </ViewNode>
   );
 });

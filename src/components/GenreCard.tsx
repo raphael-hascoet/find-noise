@@ -1,15 +1,15 @@
-import { ForceGraphNode, type ForceGraphNodeBase } from "./force-graph-node";
+import { ViewNode, type ViewNodeBase } from "./view-node";
 
 type genreCardProps = {
   genreName: string;
-} & ForceGraphNodeBase;
+} & ViewNodeBase;
 
 export function GenreCardReact({ nodeId, genreName, positioned }: genreCardProps) {
   return (
-    <ForceGraphNode nodeId={nodeId} positioned={positioned}>
+    <ViewNode nodeId={nodeId} positioned={positioned}>
       <span className="text-center font-sans text-sm text-gray-300">
         {genreName}
       </span>
-    </ForceGraphNode>
+    </ViewNode>
   );
 }

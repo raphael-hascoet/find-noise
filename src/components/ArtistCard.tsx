@@ -1,12 +1,12 @@
 import { useAtomValue } from "jotai";
 import { memo } from "react";
-import { ForceGraphNode, type ForceGraphNodeBase } from "./force-graph-node";
-import type { ArtistContext } from "./force-graph/force-graph-nodes-manager";
-import { transitioningNodesFamily } from "./force-graph/force-graph-views";
+import { ViewNode, type ViewNodeBase } from "./view-node";
+import type { ArtistContext } from "./views/nodes/view-nodes-manager";
+import { transitioningNodesFamily } from "./views/views-config";
 
 type ArtistCardProps = {
   context: ArtistContext;
-} & ForceGraphNodeBase;
+} & ViewNodeBase;
 
 export const ArtistCard = memo(function ArtistCard({
   context,
@@ -18,10 +18,10 @@ export const ArtistCard = memo(function ArtistCard({
   const contextWithBackup = context ?? transitioningNode?.nodeDef.context;
 
   return (
-    <ForceGraphNode {...graphNodeProps}>
+    <ViewNode {...graphNodeProps}>
       <span className="text-center font-sans text-sm text-gray-300">
         {contextWithBackup.data.name}
       </span>
-    </ForceGraphNode>
+    </ViewNode>
   );
 });
