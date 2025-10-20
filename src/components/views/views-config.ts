@@ -375,7 +375,6 @@ const viewBuilders = {
     buildActions: ({ changeView, selectors, data }) => {
       return {
         transitionToAlbumsForArtist: ({ artistId }: { artistId: string }) => {
-          console.log("changeView: albumsForArtist", { artistId });
           changeView("albumsForArtist", { artistId });
         },
         addRecommendationsToNode: ({ albumMbid, params }) => {

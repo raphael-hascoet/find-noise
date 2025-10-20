@@ -51,8 +51,6 @@ export const FlowchartLinks = ({
           return null;
         }
 
-        console.log(link.targets);
-
         const targets = link.targets
           .map((nodeId) => {
             const targetNode = positionedNodes.get(nodeId);
@@ -67,11 +65,6 @@ export const FlowchartLinks = ({
           .filter((link) => !!link);
 
         if (!targets.length) return null;
-
-        console.log("Rendering link:", link, {
-          sourceNode,
-          targets,
-        });
 
         const endpoints = calculateLinkEndpoints({
           source: sourceNode,
@@ -130,7 +123,6 @@ function AnimatedLink({ drawOrderedLines }: LinkEndpoints) {
   const doneCountsRef = useRef<number[]>(groups.map(() => 0));
 
   const handleRevealDone = (gIdx: number) => {
-    console.log("reveal done", { gIdx });
     const groupIndex = groups.findIndex((g) => g.gIdx === gIdx);
     if (groupIndex === -1) return;
 
@@ -197,8 +189,6 @@ function AnimatedSegment({
 
   const appearanceDelay = gIdx === 0 ? 0.6 : 0;
 
-  console.log({ gIdx });
-
   useLayoutEffect(() => {
     frame.render(() => {
       void Promise.all([
@@ -245,8 +235,7 @@ function AnimatedSegment({
           ease,
         },
       }}
-      onAnimationComplete={(def) => {
-        console.log("Animation complete", { seg, def, canReveal });
+      onAnimationComplete={() => {
         if (canReveal) onRevealDone();
       }}
     />

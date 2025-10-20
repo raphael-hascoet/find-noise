@@ -27,8 +27,6 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
   context,
   ...graphNodeProps
 }: AlbumCardProps) {
-  console.log("render");
-
   const transitioningNode = useAtomValue(
     transitioningNodesFamily(graphNodeProps.nodeId),
   );

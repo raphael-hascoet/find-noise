@@ -79,7 +79,6 @@ export const initAlbumsFromUrlAtom = atom(
 
     try {
       const res = await fetch(url);
-      console.log(res);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
 
