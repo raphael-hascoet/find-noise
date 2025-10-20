@@ -5,12 +5,12 @@ import {
   type AlbumSelectors,
 } from "../../data/albums-pool-atoms";
 import type { SimpleRecommendParams } from "../../data/get-albums-recommendations";
-import type { Position } from "./flowchart/flowchart-links";
+import type { Position } from "../flowchart/flowchart-links";
 import {
   loadedNodeDimensionsAtom,
   type NodeDimensions,
-} from "./nodes/view-node-dimensions";
-import { type ViewNodeDef } from "./nodes/view-nodes-manager";
+} from "../nodes/view-node-dimensions";
+import { type ViewNodeDef } from "../nodes/view-nodes-manager";
 import { viewBuilders } from "./view-builders";
 
 type ViewKeyToDefinition = {
@@ -86,7 +86,7 @@ type ViewConfig<TKey extends ViewKey = ViewKey> = {
   data: ViewData<TKey>;
 };
 
-type NodeDefWithDimensions = {
+export type NodeDefWithDimensions = {
   nodeDef: ViewNodeDef;
   dimensions: NodeDimensions;
 };

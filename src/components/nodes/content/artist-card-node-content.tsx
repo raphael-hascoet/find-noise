@@ -1,6 +1,6 @@
 import { useAtomValue } from "jotai";
 import { memo } from "react";
-import { transitioningNodesFamily } from "../../views-config";
+import { transitioningNodesFamily } from "../../views/views-config";
 import type { ArtistContext } from "../view-nodes-manager";
 import {
   NodeContentWrapper,

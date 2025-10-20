@@ -1,14 +1,14 @@
 import { useAtomValue } from "jotai";
 import { GitGraph, ZoomIn } from "lucide-react";
 import { memo } from "react";
-import { getAlbumCoverUrl } from "../../../../data/album-cover-urls";
-import { albumDataSelectorsAtom } from "../../../../data/albums-pool-atoms";
+import { getAlbumCoverUrl } from "../../../data/album-cover-urls";
+import { albumDataSelectorsAtom } from "../../../data/albums-pool-atoms";
 import {
-  isViewActionsForKey,
-  transitioningNodesFamily,
   type ViewActionsAtomOutput,
   type ViewKey,
-} from "../../views-config";
+  isViewActionsForKey,
+  transitioningNodesFamily,
+} from "../../views/views-config";
 import type { AlbumContext } from "../view-nodes-manager";
 import {
   NodeContentWrapper,

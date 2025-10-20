@@ -5,7 +5,7 @@ import type {
   PositionedNode,
   ViewActionsAtomOutput,
   ViewKey,
-} from "../views-config";
+} from "../views/views-config";
 import { AlbumCardNodeContent } from "./content/album-card-node-content";
 import { ArtistCardNodeContent } from "./content/artist-card-node-content";
 import { GenreCardNodeContent } from "./content/genre-card-node-content";

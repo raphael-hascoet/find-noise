@@ -10,8 +10,8 @@ import {
 import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { D3SvgRenderer } from "../../d3/renderer";
 import { albumDataSelectorsAtom } from "../../data/albums-pool-atoms";
-import { FlowchartLinks } from "./flowchart/flowchart-links";
-import { ViewNode, ViewNodeContent } from "./nodes/view-node";
+import { FlowchartLinks } from "../flowchart/flowchart-links";
+import { ViewNode, ViewNodeContent } from "../nodes/view-node";
 import {
   calculatedLinksAtom,
   createViewActionsAtom,

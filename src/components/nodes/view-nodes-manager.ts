@@ -1,4 +1,4 @@
-import type { SimpleRecommendation } from "../../../data/get-albums-recommendations";
+import type { SimpleRecommendation } from "../../data/get-albums-recommendations";
 import type { AlbumCardVariant } from "./content/album-card-node-content";
 
 type ViewNodeDefBase = {
