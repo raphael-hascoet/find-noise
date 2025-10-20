@@ -75,12 +75,12 @@ export type ViewData<T extends ViewKey> = T extends keyof ViewKeyToDefinition
   ? ViewKeyToDefinition[T]["data"]
   : never;
 
-export type ViewActions<T extends ViewKey> = T extends keyof ViewKeyToDefinition
+type ViewActions<T extends ViewKey> = T extends keyof ViewKeyToDefinition
   ? ViewKeyToDefinition[T]["actions"]
   : never;
 
 // View builder owns BOTH node creation and layout
-export type ViewBuilder<Key extends ViewKey> = {
+type ViewBuilder<Key extends ViewKey> = {
   buildNodes: (params: {
     data: ViewData<Key>;
     selectors: AlbumSelectors;
@@ -105,7 +105,7 @@ export type ViewBuilder<Key extends ViewKey> = {
 };
 
 // View builders registry
-export const viewBuilders = {
+const viewBuilders = {
   albumsForArtist: {
     // Build node definitions for this view
     buildNodes: ({ data: { artistId }, selectors }) => {
@@ -463,7 +463,7 @@ export const viewBuilders = {
 };
 
 // Active view configuration
-export type ViewConfig<TKey extends ViewKey = ViewKey> = {
+type ViewConfig<TKey extends ViewKey = ViewKey> = {
   key: TKey;
   data: ViewData<TKey>;
 };
@@ -548,12 +548,12 @@ export const nodePositioningStateAtom = atom((get): NodePositioningState => {
 });
 
 const activeViewConfigAtom = atom<ViewConfig | null>(null);
-export const activeViewConfigReadOnlyAtom = atom((get) =>
+const activeViewConfigReadOnlyAtom = atom((get) =>
   get(activeViewConfigAtom),
 );
 
 // Derived node defs - automatically rebuilds when view changes
-export const calculatedNodeDefsAtom = atom((get) => {
+const calculatedNodeDefsAtom = atom((get) => {
   const viewConfig = get(activeViewConfigAtom);
   const selectors = get(albumDataSelectorsAtom);
 
@@ -618,13 +618,6 @@ export const setActiveViewAtom = atom(null, (get, set, config: ViewConfig) => {
   set(activeViewConfigAtom, config);
 });
 
-// Atom family for accessing node context by ID
-export const nodeContextFamily = atomFamily((id: string) => {
-  return atom((get) => {
-    const nodeDefs = get(calculatedNodeDefsAtom);
-    return nodeDefs?.get(id)?.context;
-  });
-});
 
 export const transitioningNodesAtom = atom<Map<string, PositionedNode>>();
 

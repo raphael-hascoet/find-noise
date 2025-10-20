@@ -1,6 +1,6 @@
 import type { Album } from "./albums-pool-atoms";
 
-export type SimpleWeights = {
+type SimpleWeights = {
   genrePP: number; // weight for primary–primary genre match
   genrePS: number; // weight for primary–secondary or secondary–primary match
   genreSS: number; // weight for secondary–secondary match
@@ -8,7 +8,7 @@ export type SimpleWeights = {
   rating: number; // weight for positive avg-rating delta
 };
 
-export type GenreMatchBucket = {
+type GenreMatchBucket = {
   count: number;
   shared: string[];
   weight: number;

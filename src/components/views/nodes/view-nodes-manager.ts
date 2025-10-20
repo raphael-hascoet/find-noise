@@ -1,7 +1,7 @@
-import type { SimpleRecommendation } from "../../data/get-albums-recommendations";
-import type { AlbumCardVariant } from "../AlbumCard";
+import type { SimpleRecommendation } from "../../../data/get-albums-recommendations";
+import type { AlbumCardVariant } from "../../AlbumCard";
 
-export type ViewNodeDefBase = {
+type ViewNodeDefBase = {
   id: string;
   children?: ViewNodeDef[];
   onZoomClick?: () => void;
@@ -24,17 +24,14 @@ export type AlbumContext = {
   };
 };
 
-export type GenreContext = {
+type GenreContext = {
   type: "genre";
   data: {
     name: string;
   };
 };
 
-export type ViewNodeDefByType =
-  | ArtistContext
-  | AlbumContext
-  | GenreContext;
+export type ViewNodeDefByType = ArtistContext | AlbumContext | GenreContext;
 
 export type ViewNodeDef = ViewNodeDefBase & {
   context: ViewNodeDefByType;

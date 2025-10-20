@@ -1,7 +1,7 @@
 import { animate, frame } from "motion";
 import { motion, useMotionValue } from "motion/react";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { SimpleReason } from "../../data/get-albums-recommendations";
+import type { SimpleReason } from "../../../data/get-albums-recommendations";
 import type { LinkLineDefWithTags, Position } from "./flowchart-links";
 
 const X_TAG_CENTER_SPACING = 65;

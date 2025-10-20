@@ -1,12 +1,8 @@
 import { atom, useAtomValue } from "jotai";
 import { animate, frame, motion, useMotionValue } from "motion/react";
 import { Fragment, useLayoutEffect, useMemo, useRef, useState } from "react";
-import {
-  getTagsFromReasoning,
-  TagCloud,
-  type TagDef,
-} from "./flowchart-tags";
 import type { PositionedNode } from "../views-config";
+import { getTagsFromReasoning, TagCloud, type TagDef } from "./flowchart-tags";
 
 type Link = {
   source: string;
@@ -18,7 +14,7 @@ export type Position = {
   y: number;
 };
 
-export type LinkLineDef = {
+type LinkLineDef = {
   start: Position;
   end: Position;
   isArrow: boolean;
@@ -93,19 +89,8 @@ export const FlowchartLinks = ({
   );
 };
 
-// Identifies the current flowchart instance; bump this to reset registries
-export const flowchartIdAtom = atom<string>("default-flowchart");
-
 // Registry of segments that have completed initial reveal for the current flowchart
-export const seenSegmentsAtom = atom<Set<string>>(new Set<string>());
-
-// Optional: per-expand diff (filled by your tree logic when expanding a node)
-export type SegmentDiff = {
-  added: Set<string>;
-  updated: Set<string>;
-  removed: Set<string>;
-};
-export const lastExpandDiffAtom = atom<SegmentDiff | null>(null);
+const seenSegmentsAtom = atom<Set<string>>(new Set<string>());
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -113,7 +98,7 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 const REVEAL_DURATION = 0.3; // seconds for the stroke reveal per line
 const MOVE_DURATION = 0.6; // seconds for endpoint tween when layout changes
 
-export function AnimatedLink({ drawOrderedLines }: LinkEndpoints) {
+function AnimatedLink({ drawOrderedLines }: LinkEndpoints) {
   // Flatten with group membership and lengths
   const items = useMemo(
     () =>
@@ -198,13 +183,12 @@ export function AnimatedLink({ drawOrderedLines }: LinkEndpoints) {
 
   return (
     <>
-      {items.map(({ gIdx, lineIdx, seg }) => (
+      {items.map(({ gIdx, seg }) => (
         <Fragment key={seg.segmentId}>
           <AnimatedSegment
             key={seg.segmentId}
             seg={seg}
             canReveal={gIdx <= activeGroup}
-            isNew={!seenSet.has(seg.segmentId)}
             onRevealDone={() => handleRevealDone(gIdx)}
             moveDuration={MOVE_DURATION}
             revealDuration={REVEAL_DURATION}
@@ -221,7 +205,6 @@ export function AnimatedLink({ drawOrderedLines }: LinkEndpoints) {
 function AnimatedSegment({
   seg,
   canReveal,
-  isNew,
   onRevealDone,
   moveDuration,
   revealDuration,
@@ -230,7 +213,6 @@ function AnimatedSegment({
 }: {
   seg: LinkLineDef;
   canReveal: boolean;
-  isNew: boolean;
   onRevealDone: () => void;
   moveDuration: number;
   revealDuration: number;

@@ -1,7 +1,7 @@
 import type { D3SvgRenderer } from "./renderer";
 
 // Shadow filter constants
-export const SHADOW_FILTERS = {
+const SHADOW_FILTERS = {
   float: {
     blur: 6,
     offsetY: 8,

@@ -21,10 +21,7 @@ import { AlbumCard } from "../AlbumCard";
 import { ArtistCard } from "../ArtistCard";
 import { GenreCardReact } from "../GenreCard";
 import { FlowchartLinks } from "./flowchart/flowchart-links";
-import {
-  type ViewNodeDef,
-  type ViewNodeDefByType,
-} from "./nodes/view-nodes-manager";
+import { type ViewNodeDef } from "./nodes/view-nodes-manager";
 import {
   calculatedLinksAtom,
   createViewActionsAtom,
@@ -36,12 +33,6 @@ import {
   type ViewData,
   type ViewKey,
 } from "./views-config";
-
-export type ViewNode = {
-  id: string;
-  onZoomClick?: () => void;
-  context: ViewNodeDefByType;
-};
 
 type ViewsRendererProps = {
   positioningState: NodePositioningState;
@@ -68,7 +59,9 @@ export const ViewsRenderer = function (
     return null;
   }
 
-  return <ViewsRendererContent positioningState={positioningState} {...props} />;
+  return (
+    <ViewsRendererContent positioningState={positioningState} {...props} />
+  );
 };
 
 const ViewsRendererContent = function ({

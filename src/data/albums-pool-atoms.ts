@@ -2,7 +2,7 @@ import { atom } from "jotai";
 import { z } from "zod";
 import type { AlbumSelectors } from "../components/views/views-config";
 
-export const AlbumSchema = z.object({
+const AlbumSchema = z.object({
   id: z.string(),
   mbid: z.string(),
   "artist-mbid": z.string(),
@@ -55,8 +55,8 @@ const buildReferenceMapsFromAlbums = (albums: Album[]): ReferenceMaps => {
 };
 
 // Source of truth atoms
-export const albumsAtom = atom<Album[]>([]);
-export const refMapsAtom = atom<ReferenceMaps>({
+const albumsAtom = atom<Album[]>([]);
+const refMapsAtom = atom<ReferenceMaps>({
   artists: new Map(),
   genres: new Map(),
   descriptors: new Map(),

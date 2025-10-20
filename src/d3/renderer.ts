@@ -3,7 +3,7 @@ import React from "react";
 import { createFloatingFilters } from "./shadows";
 
 // Animation constants
-export const FLOAT_ANIMATION = {
+const FLOAT_ANIMATION = {
   duration: "4s",
   translateRange: 1.5, // pixels up/down
   easing: "0.45 0.05 0.55 0.95",
@@ -20,7 +20,7 @@ type D3RendererDefs = {
   };
 };
 
-export const defs: D3RendererDefs = {
+const defs: D3RendererDefs = {
   markers: {
     triangle: {
       id: "triangle",
@@ -93,20 +93,10 @@ export class D3SvgRenderer {
       .attr("calcMode", "spline")
       .attr(
         "keySplines",
-        `${FLOAT_ANIMATION.easing}; ${FLOAT_ANIMATION.easing}`
+        `${FLOAT_ANIMATION.easing}; ${FLOAT_ANIMATION.easing}`,
       )
       .attr("repeatCount", "indefinite");
   }
 }
 
-export type D3ElementBuilder = (renderer: D3SvgRenderer) => void;
-
-export type D3Position = {
-  x: number;
-  y: number;
-};
-
-export type D3Size = {
-  width: number;
-  height: number;
-};
+type D3ElementBuilder = (renderer: D3SvgRenderer) => void;
