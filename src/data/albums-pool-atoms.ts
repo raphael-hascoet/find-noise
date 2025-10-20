@@ -1,6 +1,5 @@
 import { atom } from "jotai";
 import { z } from "zod";
-import type { AlbumSelectors } from "../components/views/views-config";
 
 const AlbumSchema = z.object({
   id: z.string(),
@@ -20,6 +19,19 @@ const AlbumSchema = z.object({
 });
 
 export type Album = z.infer<typeof AlbumSchema>;
+
+export type AlbumSelectors = {
+  byMbid: (mbid: string) => Album | undefined;
+  byArtistMbid: (artistMbid: string) => Album[];
+  byGenre: (genre: string) => Album[];
+  byDescriptor: (d: string) => Album[];
+  genresForAlbum: (mbid: string) => string[];
+  allArtistKeys: () => string[];
+  allGenres: () => string[];
+  allDescriptors: () => string[];
+  randomN: (n: number) => Album[];
+  allAlbums: () => Album[];
+};
 
 type ReferenceMaps = {
   artists: Map<string, string[]>;
