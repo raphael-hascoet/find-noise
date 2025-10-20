@@ -2,6 +2,7 @@ import { animate, frame } from "motion";
 import { motion, useMotionValue } from "motion/react";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { SimpleReason } from "../../../data/get-albums-recommendations";
+import { seededRandom } from "../../../utils/seeded-random";
 import type { LinkLineDefWithTags, Position } from "./flowchart-links";
 
 const X_TAG_CENTER_SPACING = 65;
@@ -328,12 +329,3 @@ export const getTagsFromReasoning = (
 
   return [...genreTagsShown, ...descriptorTags];
 };
-
-function seededRandom(str: string) {
-  let h = 0x811c9dc5; // FNV offset basis
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 0x01000193); // FNV prime
-  }
-  return h >>> 0;
-}

@@ -89,17 +89,14 @@ export const FlowchartLinks = ({
   );
 };
 
-// Registry of segments that have completed initial reveal for the current flowchart
 const seenSegmentsAtom = atom<Set<string>>(new Set<string>());
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-// Editable timings
-const REVEAL_DURATION = 0.3; // seconds for the stroke reveal per line
-const MOVE_DURATION = 0.6; // seconds for endpoint tween when layout changes
+const REVEAL_DURATION = 0.3;
+const MOVE_DURATION = 0.6;
 
 function AnimatedLink({ drawOrderedLines }: LinkEndpoints) {
-  // Flatten with group membership and lengths
   const items = useMemo(
     () =>
       drawOrderedLines.flatMap((g, gIdx) =>
@@ -114,7 +111,6 @@ function AnimatedLink({ drawOrderedLines }: LinkEndpoints) {
 
   const seenSet = useAtomValue(seenSegmentsAtom);
 
-  // Group items by group index
   const groups = useMemo(() => {
     const map = new Map<number, typeof items>();
     for (const it of items) {
@@ -130,39 +126,15 @@ function AnimatedLink({ drawOrderedLines }: LinkEndpoints) {
       }));
   }, [items, seenSet]);
 
-  // Sequencer state
   const [activeGroup, setActiveGroup] = useState(0);
   const doneCountsRef = useRef<number[]>(groups.map(() => 0));
-  //   const seqCancelRef = useRef(false);
 
-  //   // Reset sequencing when input changes
-  //   useEffect(() => {
-  //     seqCancelRef.current = false;
-  //     setActiveGroup(0);
-  //     doneCountsRef.current = groups.map(() => 0);
-
-  //     // If the first groups have zero "new" items, skip them immediately
-  //     let g = 0;
-  //     while (g < groups.length && groups[g].newCount === 0) {
-  //       g += 1;
-  //     }
-  //     setActiveGroup(g);
-
-  //     return () => {
-  //       seqCancelRef.current = true;
-  //     };
-  //   }, [groups]);
-
-  //   // Called by children when their reveal finishes
   const handleRevealDone = (gIdx: number) => {
     console.log("reveal done", { gIdx });
-    // if (seqCancelRef.current) return;
     const groupIndex = groups.findIndex((g) => g.gIdx === gIdx);
     if (groupIndex === -1) return;
 
-    // If this group has no new segments, it's already been skipped
     if (groups[groupIndex].newCount === 0) {
-      // Ensure we stay ahead
       setActiveGroup((prev) => Math.max(prev, groups[groupIndex].gIdx + 1));
       return;
     }
@@ -172,7 +144,6 @@ function AnimatedLink({ drawOrderedLines }: LinkEndpoints) {
     doneCountsRef.current = arr;
 
     if (arr[groupIndex] >= groups[groupIndex].newCount) {
-      // Move to next group that has new segments (skip empty ones)
       let next = groupIndex + 1;
       while (next < groups.length && groups[next].newCount === 0) {
         next += 1;
@@ -219,7 +190,6 @@ function AnimatedSegment({
   gIdx: number;
   ease: [number, number, number, number];
 }) {
-  // Motion values for smooth endpoint updates
   const x1 = useMotionValue(seg.start.x);
   const y1 = useMotionValue(seg.start.y);
   const x2 = useMotionValue(seg.end.x);
@@ -229,7 +199,6 @@ function AnimatedSegment({
 
   console.log({ gIdx });
 
-  // Tween endpoints whenever coordinates change
   useLayoutEffect(() => {
     frame.render(() => {
       void Promise.all([
@@ -276,19 +245,14 @@ function AnimatedSegment({
           ease,
         },
       }}
-      onUpdate={() => {
-        // no-op; Framer drives the dash animation
-      }}
       onAnimationComplete={(def) => {
         console.log("Animation complete", { seg, def, canReveal });
-        // Only notify when a real reveal just happened
         if (canReveal) onRevealDone();
       }}
     />
   );
 }
 
-// Calculate link endpoints with edge-aware positioning for flowchart view
 const calculateLinkEndpoints = ({
   source,
   targets,
@@ -300,7 +264,6 @@ const calculateLinkEndpoints = ({
     (t1, t2) => t1.position.x - t2.position.x,
   );
 
-  // Source dimensions
   const sourceWidth = source.dimensions.width;
   const sourceHeight = source.dimensions.height;
   const sourceHalfW = sourceWidth / 2;

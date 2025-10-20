@@ -1,27 +1,17 @@
 import * as d3 from "d3";
 import { useAtomValue, useSetAtom } from "jotai";
 import { ZoomIn, ZoomOut } from "lucide-react";
-import { animate, frame } from "motion";
 import {
   AnimatePresence,
   motion,
   useMotionValue,
   useTransform,
 } from "motion/react";
-import {
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  type RefObject,
-} from "react";
+import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { D3SvgRenderer } from "../../d3/renderer";
 import { albumDataSelectorsAtom } from "../../data/albums-pool-atoms";
-import { AlbumCard } from "../AlbumCard";
-import { ArtistCard } from "../ArtistCard";
-import { GenreCardReact } from "../GenreCard";
 import { FlowchartLinks } from "./flowchart/flowchart-links";
-import { type ViewNodeDef } from "./nodes/view-nodes-manager";
+import { ViewNode, ViewNodeContent } from "./nodes/view-node";
 import {
   calculatedLinksAtom,
   createViewActionsAtom,
@@ -29,15 +19,12 @@ import {
   setActiveViewAtom,
   transitioningNodesAtom,
   type NodePositioningState,
-  type ViewActionsAtomOutput,
   type ViewData,
   type ViewKey,
 } from "./views-config";
 
 type ViewsRendererProps = {
   positioningState: NodePositioningState;
-  width?: number;
-  height?: number;
   showDebugGrid?: boolean;
 };
 
@@ -48,7 +35,6 @@ export const ViewsRenderer = function (
   const setActiveView = useSetAtom(setActiveViewAtom);
   const positioningState = useAtomValue(nodePositioningStateAtom);
 
-  // Set the view configuration - nodes are built automatically
   useEffect(() => {
     const firstArtist = selectors?.allArtistKeys?.()[0];
     if (!firstArtist) return;
@@ -66,8 +52,6 @@ export const ViewsRenderer = function (
 
 const ViewsRendererContent = function ({
   positioningState,
-  width = 800,
-  height = 600,
   showDebugGrid = false,
 }: ViewsRendererProps) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -80,7 +64,6 @@ const ViewsRendererContent = function ({
   const setActiveView = useSetAtom(setActiveViewAtom);
   const setTransitionNodes = useSetAtom(transitioningNodesAtom);
 
-  // Create view actions atom with changeView callback
   const viewActionsAtom = useMemo(
     () =>
       createViewActionsAtom({
@@ -93,7 +76,6 @@ const ViewsRendererContent = function ({
 
   const viewActions = useAtomValue(viewActionsAtom);
 
-  // Initialize renderer for defs (filters, markers, etc.)
   useEffect(() => {
     if (!svgRef.current) return;
 
@@ -106,7 +88,6 @@ const ViewsRendererContent = function ({
     const renderer = rendererRef.current;
     if (!renderer) return;
 
-    // Add arrow marker for links
     renderer.defs
       .append("marker")
       .attr("id", "link-arrow")
@@ -155,9 +136,8 @@ const ViewsRendererContent = function ({
     d3ZoomRef.current = zoom;
     zoomRoot.call(zoom);
 
-    // Initialize D3's internal transform state to match React state
     const initialTransform = d3.zoomIdentity
-      .translate(width * 0.2, height * 0.15)
+      .translate(800 * 0.2, 600 * 0.15)
       .scale(0.5);
     zoomRoot.call(zoom.transform, initialTransform);
   }, []);
@@ -229,7 +209,7 @@ const ViewsRendererContent = function ({
           {positioningState.state === "in-progress" &&
             Array.from(positioningState.targetNodeDefs).map(([id, nodeDef]) => (
               <div key={`shell-${id}`} className="opacity-0">
-                <NodeContent
+                <ViewNodeContent
                   hasPosition={false}
                   nodeDef={nodeDef}
                   viewActions={viewActions}
@@ -240,18 +220,11 @@ const ViewsRendererContent = function ({
             Array.from(visiblePositionedNodes.entries()).map(
               ([nodeId, node]) => {
                 return (
-                  <NodeMotion
+                  <ViewNode
                     key={nodeId}
-                    left={node.position.x}
-                    top={node.position.y}
-                    nodeId={nodeId}
-                  >
-                    <NodeContent
-                      hasPosition={true}
-                      nodeDef={node.nodeDef}
-                      viewActions={viewActions}
-                    />
-                  </NodeMotion>
+                    node={node}
+                    viewActions={viewActions}
+                  />
                 );
               },
             )}
@@ -303,37 +276,6 @@ const ViewsRendererContent = function ({
       </div>
     </>
   );
-};
-
-const NodeContent = ({
-  hasPosition,
-  nodeDef,
-  viewActions,
-}: {
-  hasPosition: boolean;
-  nodeDef: ViewNodeDef;
-  viewActions: ViewActionsAtomOutput<ViewKey> | null;
-}) => {
-  return nodeDef.context.type === "artist" ? (
-    <ArtistCard
-      context={nodeDef.context}
-      nodeId={nodeDef.id}
-      positioned={hasPosition}
-    />
-  ) : nodeDef.context.type === "album" ? (
-    <AlbumCard
-      nodeId={nodeDef.id}
-      positioned={hasPosition}
-      viewActions={viewActions}
-      context={nodeDef.context}
-    />
-  ) : nodeDef.context.type === "genre" ? (
-    <GenreCardReact
-      genreName={nodeDef.context.data.name}
-      nodeId={nodeDef.id}
-      positioned={hasPosition}
-    />
-  ) : null;
 };
 
 const DebugGrid = ({
@@ -389,54 +331,3 @@ const DebugGrid = ({
     </>
   );
 };
-
-function NodeMotion({
-  left,
-  top,
-  children,
-}: {
-  left: number;
-  top: number;
-  children: React.ReactNode;
-  nodeId: string;
-}) {
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const prev = useRef<{ left: number; top: number }>({ left, top });
-
-  useLayoutEffect(() => {
-    if (left !== prev.current.left || top !== prev.current.top) {
-      const dx = prev.current.left - left + x.get();
-      const dy = prev.current.top - top + y.get();
-      x.set(dx);
-      y.set(dy);
-      frame.render(() => {
-        animate(x, 0, { duration: 0.6, ease: [0.22, 1, 0.36, 1] });
-        animate(y, 0, { duration: 0.6, ease: [0.22, 1, 0.36, 1] });
-      });
-      prev.current = { left, top };
-    }
-  }, [left, top, x, y]);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{
-        opacity: { duration: 0.6, ease: "easeOut" },
-      }}
-      style={{
-        position: "absolute",
-        left,
-        top,
-        x: x,
-        y: y,
-        transformOrigin: "top left",
-        pointerEvents: "auto",
-      }}
-    >
-      {children}
-    </motion.div>
-  );
-}

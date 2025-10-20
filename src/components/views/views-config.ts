@@ -9,11 +9,11 @@ import {
   simpleRecommendAlbums,
   type SimpleRecommendParams,
 } from "../../data/get-albums-recommendations";
+import type { Position } from "./flowchart/flowchart-links";
 import {
   loadedNodeDimensionsAtom,
   type NodeDimensions,
 } from "./nodes/view-node-dimensions";
-import type { Position } from "./flowchart/flowchart-links";
 import {
   addChildrenToNodeInTree,
   flattenNodeTreeToMap,
@@ -21,7 +21,6 @@ import {
   type ViewNodeDef,
 } from "./nodes/view-nodes-manager";
 
-// Album selectors type helper
 export type AlbumSelectors = {
   byMbid: (mbid: string) => Album | undefined;
   byArtistMbid: (artistMbid: string) => Album[];
@@ -79,7 +78,6 @@ type ViewActions<T extends ViewKey> = T extends keyof ViewKeyToDefinition
   ? ViewKeyToDefinition[T]["actions"]
   : never;
 
-// View builder owns BOTH node creation and layout
 type ViewBuilder<Key extends ViewKey> = {
   buildNodes: (params: {
     data: ViewData<Key>;
@@ -104,16 +102,14 @@ type ViewBuilder<Key extends ViewKey> = {
   };
 };
 
-// View builders registry
+//
 const viewBuilders = {
   albumsForArtist: {
-    // Build node definitions for this view
     buildNodes: ({ data: { artistId }, selectors }) => {
       const albums = selectors.byArtistMbid(artistId);
       const artistName = albums[0]?.artist || "";
 
       return new Map([
-        // Artist node
         [
           artistId,
           {
@@ -124,7 +120,7 @@ const viewBuilders = {
             },
           } as ViewNodeDef,
         ],
-        // Album nodes
+
         ...albums.map((album): [string, ViewNodeDef] => [
           album.mbid,
           {
@@ -142,7 +138,6 @@ const viewBuilders = {
       ]);
     },
 
-    // Build layout positions for this view
     buildNodePositions: ({
       data: { artistId },
       selectors,
@@ -161,7 +156,7 @@ const viewBuilders = {
       let nextY = 0;
 
       const positionMap = new Map<string, Position>();
-      positionMap.set(artistId, { x: 0, y: 0 }); // Center the artist
+      positionMap.set(artistId, { x: 0, y: 0 });
 
       nextY +=
         (nodeDefsWithDimensions.get(artistId)?.dimensions.height || 0) + Y_GAP;
@@ -185,11 +180,11 @@ const viewBuilders = {
           y: nextY,
         });
         if ((index + 1) % MAX_ALBUMS_PER_ROW === 0) {
-          nextY += maxHeightOnRow + Y_GAP; // Move down for the next row
-          nextX = 0; // Reset X position
+          nextY += maxHeightOnRow + Y_GAP;
+          nextX = 0;
           maxHeightOnRow = dimensions.height;
         } else {
-          nextX += dimensions.width + X_GAP; // Add width of the album card + margin
+          nextX += dimensions.width + X_GAP;
           maxHeightOnRow = Math.max(maxHeightOnRow, dimensions.height);
         }
       });
@@ -213,11 +208,11 @@ const viewBuilders = {
   flowchart: {
     buildNodes: ({ data, selectors }) => {
       const { albumMbid, nodeTree } = data;
-      // If we already have a tree in state, flatten and return
+
       if (nodeTree) {
         return flattenNodeTreeToMap(nodeTree);
       }
-      // Otherwise create initial root-only tree
+
       const album = selectors.byMbid(albumMbid);
       if (!album) return new Map();
       const root: ViewNodeDef = {
@@ -462,7 +457,6 @@ const viewBuilders = {
   [K in ViewKey]: ViewBuilder<K>;
 };
 
-// Active view configuration
 type ViewConfig<TKey extends ViewKey = ViewKey> = {
   key: TKey;
   data: ViewData<TKey>;
@@ -548,11 +542,8 @@ export const nodePositioningStateAtom = atom((get): NodePositioningState => {
 });
 
 const activeViewConfigAtom = atom<ViewConfig | null>(null);
-const activeViewConfigReadOnlyAtom = atom((get) =>
-  get(activeViewConfigAtom),
-);
+const activeViewConfigReadOnlyAtom = atom((get) => get(activeViewConfigAtom));
 
-// Derived node defs - automatically rebuilds when view changes
 const calculatedNodeDefsAtom = atom((get) => {
   const viewConfig = get(activeViewConfigAtom);
   const selectors = get(albumDataSelectorsAtom);
@@ -582,7 +573,6 @@ export const isViewActionsForKey = <K extends ViewKey>(
   return obj?.key === key;
 };
 
-// Factory to create view actions with proper changeView callback
 export const createViewActionsAtom = ({
   changeView,
 }: {
@@ -606,7 +596,6 @@ export const createViewActionsAtom = ({
   });
 };
 
-// Setter for changing the active view (drives both nodes and positions)
 export const setActiveViewAtom = atom(null, (get, set, config: ViewConfig) => {
   const currentPositioningState = get(nodePositioningStateAtom);
   if (currentPositioningState.state === "in-progress") {
@@ -618,7 +607,6 @@ export const setActiveViewAtom = atom(null, (get, set, config: ViewConfig) => {
   set(activeViewConfigAtom, config);
 });
 
-
 export const transitioningNodesAtom = atom<Map<string, PositionedNode>>();
 
 export const transitioningNodesFamily = atomFamily((id: string) => {
@@ -628,12 +616,10 @@ export const transitioningNodesFamily = atomFamily((id: string) => {
   });
 });
 
-// Calculated links - extracts parent-child relationships from node tree
 export const calculatedLinksAtom = atom((get) => {
   const nodeDefs = get(calculatedNodeDefsAtom);
   const viewConfig = get(activeViewConfigReadOnlyAtom);
 
-  // Only show links in flowchart view
   if (viewConfig?.key !== "flowchart") return [];
 
   const links: Array<{ source: string; targets: string[] }> = [];
