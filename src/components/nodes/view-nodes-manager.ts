@@ -1,5 +1,6 @@
-import type { SimpleRecommendation } from "../../../data/get-albums-recommendations";
-import type { AlbumCardVariant } from "./content/album-card-node-content";
+import type { AlbumCardContextData } from "./content/album-card-node-content";
+import type { IconButtonContextData } from "./content/icon-button-node-content";
+import type { SectionTitleContextData } from "./content/section-title-node-content";
 
 type ViewNodeDefBase = {
   id: string;
@@ -16,22 +17,24 @@ export type ArtistContext = {
 
 export type AlbumContext = {
   type: "album";
-  data: {
-    title: string;
-    artist: string;
-    variant: AlbumCardVariant;
-    recommendation?: Omit<SimpleRecommendation, "album">;
-  };
+  data: AlbumCardContextData;
 };
 
-type GenreContext = {
-  type: "genre";
-  data: {
-    name: string;
-  };
+export type SectionTitleContext = {
+  type: "section-title";
+  data: SectionTitleContextData;
 };
 
-export type ViewNodeDefByType = ArtistContext | AlbumContext | GenreContext;
+export type IconButtonContext = {
+  type: "icon-button";
+  data: IconButtonContextData;
+};
+
+export type ViewNodeDefByType =
+  | ArtistContext
+  | AlbumContext
+  | SectionTitleContext
+  | IconButtonContext;
 
 export type ViewNodeDef = ViewNodeDefBase & {
   context: ViewNodeDefByType;

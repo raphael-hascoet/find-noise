@@ -4,8 +4,6 @@
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #101010;
-
   --subtle-gray-gradient:
     133deg, rgba(30, 41, 57, 1) 0%, rgba(39, 41, 48, 1) 100%;
 }
@@ -40,4 +38,12 @@ body {
 /* Subtle light gray shadow */
 .light-shadow {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.focus-dark-gray-outline {
+  outline-color: transparent;
+}
+
+.focus-dark-gray-outline:focus-visible {
+  outline-color: #5a5a5a;
 }

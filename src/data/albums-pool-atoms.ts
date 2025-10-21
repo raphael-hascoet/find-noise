@@ -1,6 +1,6 @@
 import { atom } from "jotai";
 import { z } from "zod";
-import type { AlbumSelectors } from "../components/views/views-config";
+import { seededRandom } from "../utils/seeded-random";
 
 const AlbumSchema = z.object({
   id: z.string(),
@@ -20,6 +20,19 @@ const AlbumSchema = z.object({
 });
 
 export type Album = z.infer<typeof AlbumSchema>;
+
+export type AlbumSelectors = {
+  byMbid: (mbid: string) => Album | undefined;
+  byArtistMbid: (artistMbid: string) => Album[];
+  byGenre: (genre: string) => Album[];
+  byDescriptor: (d: string) => Album[];
+  genresForAlbum: (mbid: string) => string[];
+  allArtistKeys: () => string[];
+  allGenres: () => string[];
+  allDescriptors: () => string[];
+  randomN: (n: number, seed?: string) => Album[];
+  allAlbums: () => Album[];
+};
 
 type ReferenceMaps = {
   artists: Map<string, string[]>;
@@ -123,12 +136,18 @@ export const albumDataSelectorsAtom = atom((get): AlbumSelectors => {
     allArtistKeys: () => Array.from(ref.artists.keys()),
     allGenres: () => Array.from(ref.genres.keys()),
     allDescriptors: () => Array.from(ref.descriptors.keys()),
-    randomN: (n: number) => {
+    randomN: (n: number, seed?: string) => {
       const all = Array.from(byId.values());
 
+      console.log(`For seed ${seed}-1: ${seededRandom(`${seed}-${1}`)}`);
+      console.log(`For seed ${seed}-2: ${seededRandom(`${seed}-${2}`)}`);
       const randomIds = all
         .map((_, i) => i)
-        .sort(() => Math.random() - 0.5)
+        .sort((i1, i2) =>
+          seed
+            ? seededRandom(`${seed}-${i1}`) - seededRandom(`${seed}-${i2}`)
+            : Math.random(),
+        )
         .slice(0, n);
       return randomIds.map((id) => all[id]);
     },

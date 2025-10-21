@@ -1,22 +1,22 @@
+import { useAtomValue } from "jotai";
 import { animate, frame } from "motion";
 import { motion, useMotionValue } from "motion/react";
 import { useLayoutEffect, useRef } from "react";
-import type {
-  PositionedNode,
-  ViewActionsAtomOutput,
-  ViewKey,
-} from "../views-config";
+import {
+  transitioningNodesFamily,
+  type PositionedNode,
+} from "../views/views-config";
 import { AlbumCardNodeContent } from "./content/album-card-node-content";
 import { ArtistCardNodeContent } from "./content/artist-card-node-content";
-import { GenreCardNodeContent } from "./content/genre-card-node-content";
+import { IconButtonNodeContent } from "./content/icon-button-node-content";
+import { SectionTitleNodeContent } from "./content/section-title-node-content";
 import type { ViewNodeDef } from "./view-nodes-manager";
 
 export type ViewNodeProps = {
   node: PositionedNode;
-  viewActions: ViewActionsAtomOutput<ViewKey> | null;
 };
 
-export const ViewNode = ({ node, viewActions }: ViewNodeProps) => {
+export const ViewNode = ({ node }: ViewNodeProps) => {
   return (
     <NodeMotion
       key={node.nodeDef.id}
@@ -24,11 +24,7 @@ export const ViewNode = ({ node, viewActions }: ViewNodeProps) => {
       top={node.position.y}
       nodeId={node.nodeDef.id}
     >
-      <ViewNodeContent
-        hasPosition={true}
-        nodeDef={node.nodeDef}
-        viewActions={viewActions}
-      />
+      <ViewNodeContent hasPosition={true} nodeDef={node.nodeDef} />
     </NodeMotion>
   );
 };
@@ -87,32 +83,53 @@ function NodeMotion({
 export type ViewNodeContentProps = {
   hasPosition: boolean;
   nodeDef: ViewNodeDef;
-  viewActions: ViewActionsAtomOutput<ViewKey> | null;
 };
 
 export const ViewNodeContent = ({
   hasPosition,
   nodeDef,
-  viewActions,
 }: ViewNodeContentProps) => {
-  return nodeDef.context.type === "artist" ? (
-    <ArtistCardNodeContent
-      context={nodeDef.context}
-      nodeId={nodeDef.id}
-      positioned={hasPosition}
-    />
-  ) : nodeDef.context.type === "album" ? (
-    <AlbumCardNodeContent
-      nodeId={nodeDef.id}
-      positioned={hasPosition}
-      viewActions={viewActions}
-      context={nodeDef.context}
-    />
-  ) : nodeDef.context.type === "genre" ? (
-    <GenreCardNodeContent
-      genreName={nodeDef.context.data.name}
-      nodeId={nodeDef.id}
-      positioned={hasPosition}
-    />
-  ) : null;
+  const transitioningNode = useAtomValue(transitioningNodesFamily(nodeDef.id));
+  const contextWithBackup =
+    nodeDef.context ?? transitioningNode?.nodeDef.context;
+
+  switch (contextWithBackup.type) {
+    case "artist":
+      return (
+        <ArtistCardNodeContent
+          context={contextWithBackup}
+          nodeId={nodeDef.id}
+          positioned={hasPosition}
+        />
+      );
+    case "album":
+      return (
+        <AlbumCardNodeContent
+          nodeId={nodeDef.id}
+          positioned={hasPosition}
+          context={contextWithBackup}
+        />
+      );
+    case "section-title":
+      return (
+        <SectionTitleNodeContent
+          context={contextWithBackup.data}
+          nodeId={nodeDef.id}
+          positioned={hasPosition}
+        />
+      );
+
+    case "icon-button":
+      return (
+        <IconButtonNodeContent
+          context={contextWithBackup.data}
+          nodeId={nodeDef.id}
+          positioned={hasPosition}
+        />
+      );
+
+    default:
+      console.warn("Unknown node type, ignoring:", nodeDef.context);
+      return null;
+  }
 };

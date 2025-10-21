@@ -7,20 +7,18 @@ import {
   useMotionValue,
   useTransform,
 } from "motion/react";
-import { useEffect, useMemo, useRef, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
+import { ulid } from "ulid";
 import { D3SvgRenderer } from "../../d3/renderer";
 import { albumDataSelectorsAtom } from "../../data/albums-pool-atoms";
-import { FlowchartLinks } from "./flowchart/flowchart-links";
-import { ViewNode, ViewNodeContent } from "./nodes/view-node";
+import { FlowchartLinks } from "../flowchart/flowchart-links";
+import { ViewNode, ViewNodeContent } from "../nodes/view-node";
 import {
   calculatedLinksAtom,
-  createViewActionsAtom,
   nodePositioningStateAtom,
   setActiveViewAtom,
   transitioningNodesAtom,
   type NodePositioningState,
-  type ViewData,
-  type ViewKey,
 } from "./views-config";
 
 type ViewsRendererProps = {
@@ -36,9 +34,7 @@ export const ViewsRenderer = function (
   const positioningState = useAtomValue(nodePositioningStateAtom);
 
   useEffect(() => {
-    const firstArtist = selectors?.allArtistKeys?.()[0];
-    if (!firstArtist) return;
-    setActiveView({ key: "albumsForArtist", data: { artistId: firstArtist } });
+    setActiveView({ key: "home", data: { seed: ulid() } });
   }, [selectors, setActiveView]);
 
   if (positioningState.state === "init") {
@@ -61,20 +57,7 @@ const ViewsRendererContent = function ({
 
   const links = useAtomValue(calculatedLinksAtom);
 
-  const setActiveView = useSetAtom(setActiveViewAtom);
   const setTransitionNodes = useSetAtom(transitioningNodesAtom);
-
-  const viewActionsAtom = useMemo(
-    () =>
-      createViewActionsAtom({
-        changeView: <K extends ViewKey>(key: K, data: ViewData<K>) => {
-          setActiveView({ key, data });
-        },
-      }),
-    [setActiveView],
-  );
-
-  const viewActions = useAtomValue(viewActionsAtom);
 
   useEffect(() => {
     if (!svgRef.current) return;
@@ -183,23 +166,13 @@ const ViewsRendererContent = function ({
           {positioningState.state === "in-progress" &&
             Array.from(positioningState.targetNodeDefs).map(([id, nodeDef]) => (
               <div key={`shell-${id}`} className="opacity-0">
-                <ViewNodeContent
-                  hasPosition={false}
-                  nodeDef={nodeDef}
-                  viewActions={viewActions}
-                />
+                <ViewNodeContent hasPosition={false} nodeDef={nodeDef} />
               </div>
             ))}
           {visiblePositionedNodes &&
             Array.from(visiblePositionedNodes.entries()).map(
               ([nodeId, node]) => {
-                return (
-                  <ViewNode
-                    key={nodeId}
-                    node={node}
-                    viewActions={viewActions}
-                  />
-                );
+                return <ViewNode key={nodeId} node={node} />;
               },
             )}
         </AnimatePresence>
@@ -244,15 +217,15 @@ const ZoomButtons = ({
   onZoomOut: () => void;
 }) => {
   return (
-    <div className="fixed right-2 bottom-2 flex gap-2 border-gray-800 bg-amber-900 p-2">
+    <div className="pointer-events-none fixed right-2 bottom-2 flex gap-2 bg-transparent p-2">
       <button
-        className="cursor-pointer rounded-full bg-gray-800 p-2 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
+        className="pointer-events-auto cursor-pointer rounded-full bg-gray-800 p-2 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
         onClick={onZoomIn}
       >
         <ZoomIn width={16} height={16} />
       </button>
       <button
-        className="cursor-pointer rounded-full bg-gray-800 p-2 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
+        className="pointer-events-auto cursor-pointer rounded-full bg-gray-800 p-2 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
         onClick={onZoomOut}
       >
         <ZoomOut width={16} height={16} />

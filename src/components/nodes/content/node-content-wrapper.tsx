@@ -28,11 +28,7 @@ export const NodeContentWrapper = ({
   }, [nodeId]);
 
   return (
-    <div
-      className="flex w-fit flex-col items-center justify-center gap-2 rounded-lg bg-linear-(--subtle-gray-gradient) p-4 shadow-sm/30"
-      ref={ref}
-      tabIndex={0}
-    >
+    <div ref={ref} className="h-fit w-fit">
       {children}
     </div>
   );

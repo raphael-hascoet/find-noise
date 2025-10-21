@@ -1,3 +1,4 @@
+import { AppHeader } from "./header/app-header";
 import { ViewsRenderer } from "./views/views-renderer";
 
 function DrawArea() {
@@ -22,6 +23,7 @@ function DrawArea() {
           position: "relative",
         }}
       >
+        <AppHeader />
         <ViewsRenderer showDebugGrid />
       </div>
     </div>

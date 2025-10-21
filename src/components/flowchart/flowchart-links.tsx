@@ -1,7 +1,7 @@
 import { atom, useAtomValue } from "jotai";
 import { animate, frame, motion, useMotionValue } from "motion/react";
 import { Fragment, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { PositionedNode } from "../views-config";
+import type { PositionedNode } from "../views/views-config";
 import { getTagsFromReasoning, TagCloud, type TagDef } from "./flowchart-tags";
 
 type Link = {

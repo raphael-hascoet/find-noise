@@ -38,6 +38,9 @@ importers:
       tailwindcss:
         specifier: ^4.1.14
         version: 4.1.14
+      ulid:
+        specifier: ^3.0.1
+        version: 3.0.1
       zod:
         specifier: ^4.1.11
         version: 4.1.11
@@ -1671,6 +1674,10 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
+  ulid@3.0.1:
+    resolution: {integrity: sha512-dPJyqPzx8preQhqq24bBG1YNkvigm87K8kVEHCD+ruZg24t6IFEFv00xMWfxcC4djmFtiTLdFuADn4+DOz6R7Q==}
+    hasBin: true
+
   undici-types@7.13.0:
     resolution: {integrity: sha512-Ov2Rr9Sx+fRgagJ5AX0qvItZG/JKKoBRAVITs1zk7IqZGTJUwgUr7qoYBpWwakpWilTZFM98rG/AFRocu10iIQ==}
 
@@ -3194,6 +3201,8 @@ snapshots:
       - supports-color
 
   typescript@5.9.3: {}
+
+  ulid@3.0.1: {}
 
   undici-types@7.13.0: {}
 
