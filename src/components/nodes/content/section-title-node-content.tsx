@@ -18,7 +18,7 @@ export const SectionTitleNodeContent = memo(function SectionTitleNodeContent({
 }: SectionTitleNodeContentProps) {
   return (
     <NodeContentWrapper {...graphNodeProps}>
-      <div className="rounded-xl border-2 border-gray-800 bg-blue-950 px-3 py-2">
+      <div className="rounded-xl border-2 border-gray-800 bg-violet-950 px-3 py-2">
         <span className="text-md text-center font-sans font-bold text-gray-300">
           {context.label}
         </span>

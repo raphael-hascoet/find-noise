@@ -217,15 +217,15 @@ const ZoomButtons = ({
   onZoomOut: () => void;
 }) => {
   return (
-    <div className="fixed right-2 bottom-2 flex gap-2 border-gray-800 bg-amber-900 p-2">
+    <div className="pointer-events-none fixed right-2 bottom-2 flex gap-2 bg-transparent p-2">
       <button
-        className="cursor-pointer rounded-full bg-gray-800 p-2 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
+        className="pointer-events-auto cursor-pointer rounded-full bg-gray-800 p-2 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
         onClick={onZoomIn}
       >
         <ZoomIn width={16} height={16} />
       </button>
       <button
-        className="cursor-pointer rounded-full bg-gray-800 p-2 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
+        className="pointer-events-auto cursor-pointer rounded-full bg-gray-800 p-2 text-gray-400 shadow-lg/25 shadow-gray-950 hover:bg-gray-700"
         onClick={onZoomOut}
       >
         <ZoomOut width={16} height={16} />
