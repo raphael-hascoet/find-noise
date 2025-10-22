@@ -30,6 +30,11 @@ export type ViewKeyToDefinition = {
       nodeTree?: ViewNodeDef;
     };
   };
+  search: {
+    data: {
+      query: string;
+    };
+  };
 };
 
 export type ViewKey = keyof ViewKeyToDefinition;

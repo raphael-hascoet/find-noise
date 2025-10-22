@@ -24,7 +24,7 @@ export type AlbumCardContextData = {
   recommendation?: Omit<SimpleRecommendation, "album">;
 };
 
-export type AlbumCardVariant = "flowchart" | "albumsForArtist" | "home";
+export type AlbumCardVariant = "flowchart" | "albumsForArtist" | "home" | "search";
 
 export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
   context,
