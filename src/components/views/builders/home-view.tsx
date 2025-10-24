@@ -101,7 +101,11 @@ export const homeView: Atom<ViewBuilder<"home">> = atom(() => ({
 const homeViewActionsAtomGroup = {
   refreshRandomPicks: atom(null, (_, set) => {
     console.log("Refreshing random picks");
-    set(setActiveViewAtom, { key: "home", data: { seed: ulid() } });
+    set(setActiveViewAtom, {
+      key: "home",
+      data: { seed: ulid() },
+      skipRezoom: true,
+    });
   }),
 };
 

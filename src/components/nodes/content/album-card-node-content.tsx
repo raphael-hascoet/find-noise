@@ -24,7 +24,11 @@ export type AlbumCardContextData = {
   recommendation?: Omit<SimpleRecommendation, "album">;
 };
 
-export type AlbumCardVariant = "flowchart" | "albumsForArtist" | "home";
+export type AlbumCardVariant =
+  | "flowchart"
+  | "albumsForArtist"
+  | "home"
+  | "search";
 
 export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
   context,
@@ -58,12 +62,12 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
               draggable={false}
             />
           </div>
-          <span className="text-center font-sans text-sm text-gray-300">
+          <p className="max-w-full text-center font-sans text-sm break-words text-gray-300">
             {album ? album.release : "Unknown Album"}
-          </span>
+          </p>
           {variant !== "albumsForArtist" && (
             <p
-              className="text-center font-sans text-xs text-gray-400 hover:cursor-pointer hover:underline"
+              className="max-w-fulltext-center font-sans text-xs break-words text-gray-400 hover:cursor-pointer hover:underline"
               onClick={(e) => {
                 e.stopPropagation();
                 setActiveView({
