@@ -11,6 +11,7 @@ import {
   type NodeDimensions,
 } from "../nodes/view-node-dimensions";
 import { type ViewNodeDef } from "../nodes/view-nodes-manager";
+import { zoomStatusAtom } from "../zoom-manager";
 import { viewBuilders } from "./view-builders";
 
 export type ViewKeyToDefinition = {
@@ -165,16 +166,27 @@ const calculatedNodeDefsAtom = atom((get) => {
   }) as Map<string, ViewNodeDef>;
 });
 
-export const setActiveViewAtom = atom(null, (get, set, config: ViewConfig) => {
-  const currentPositioningState = get(nodePositioningStateAtom);
-  if (currentPositioningState.state === "in-progress") {
-    console.warn("New active view while positioning is in progress");
-  }
-  if (currentPositioningState.state === "ready") {
-    set(transitioningNodesAtom, currentPositioningState.positionedNodes);
-  }
-  set(activeViewConfigAtom, config);
-});
+type SetActiveViewParams = ViewConfig & {
+  skipRezoom?: boolean;
+};
+
+export const setActiveViewAtom = atom(
+  null,
+  (get, set, config: SetActiveViewParams) => {
+    const currentPositioningState = get(nodePositioningStateAtom);
+    if (currentPositioningState.state === "in-progress") {
+      console.warn("New active view while positioning is in progress");
+    }
+    if (currentPositioningState.state === "ready") {
+      set(transitioningNodesAtom, currentPositioningState.positionedNodes);
+    }
+    set(activeViewConfigAtom, config);
+
+    set(zoomStatusAtom, {
+      status: config.skipRezoom ? "resizing-pending" : "rezooming-pending",
+    });
+  },
+);
 
 export const transitioningNodesAtom = atom<Map<string, PositionedNode>>();
 
@@ -186,18 +198,25 @@ export const transitioningNodesFamily = atomFamily((id: string) => {
 });
 
 export const calculatedLinksAtom = atom((get) => {
-  const nodeDefs = get(calculatedNodeDefsAtom);
+  const positioningState = get(nodePositioningStateAtom);
   const viewConfig = get(activeViewConfigReadOnlyAtom);
 
   if (viewConfig?.key !== "flowchart") return [];
 
+  const visiblePositionedNodes =
+    positioningState.state === "ready"
+      ? positioningState.positionedNodes
+      : positioningState.state === "in-progress"
+        ? (positioningState.transitionNodes ?? null)
+        : null;
+
   const links: Array<{ source: string; targets: string[] }> = [];
 
-  nodeDefs?.forEach((node) => {
-    if (node.children && node.children.length > 0) {
+  visiblePositionedNodes?.forEach(({ nodeDef }) => {
+    if (nodeDef.children && nodeDef.children.length > 0) {
       links.push({
-        source: node.id,
-        targets: node.children.map((child) => child.id),
+        source: nodeDef.id,
+        targets: nodeDef.children.map((child) => child.id),
       });
     }
   });

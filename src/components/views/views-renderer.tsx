@@ -1,18 +1,13 @@
-import * as d3 from "d3";
 import { useAtomValue, useSetAtom } from "jotai";
 import { ZoomIn, ZoomOut } from "lucide-react";
-import {
-  AnimatePresence,
-  motion,
-  useMotionValue,
-  useTransform,
-} from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, type RefObject } from "react";
 import { ulid } from "ulid";
 import { D3SvgRenderer } from "../../d3/renderer";
 import { albumDataSelectorsAtom } from "../../data/albums-pool-atoms";
 import { FlowchartLinks } from "../flowchart/flowchart-links";
 import { ViewNode, ViewNodeContent } from "../nodes/view-node";
+import { useZoomManager } from "../zoom-manager";
 import {
   calculatedLinksAtom,
   nodePositioningStateAtom,
@@ -51,7 +46,6 @@ const ViewsRendererContent = function ({
   showDebugGrid = false,
 }: ViewsRendererProps) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const d3ZoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown>>(null);
   const rendererRef = useRef<D3SvgRenderer | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -69,35 +63,9 @@ const ViewsRendererContent = function ({
     }
   }, []);
 
-  const tx = useMotionValue(0);
-  const ty = useMotionValue(0);
-  const tk = useMotionValue(1);
-
-  const overlayTransform = useTransform(
-    () => `translate(${tx.get()}px, ${ty.get()}px) scale(${tk.get()})`,
-  );
-
-  useEffect(() => {
-    const zoomRoot = d3.select((svgRef as RefObject<SVGSVGElement>).current);
-
-    const zoom = d3
-      .zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.1, 4])
-      .on("zoom", (e) => {
-        const t = e.transform;
-        tx.set(t.x);
-        ty.set(t.y);
-        tk.set(t.k);
-      });
-
-    d3ZoomRef.current = zoom;
-    zoomRoot.call(zoom);
-
-    const initialTransform = d3.zoomIdentity
-      .translate(800 * 0.2, 600 * 0.15)
-      .scale(0.5);
-    zoomRoot.call(zoom.transform, initialTransform);
-  }, []);
+  const { overlayTransform, onZoom } = useZoomManager({
+    svgRef,
+  });
 
   const visiblePositionedNodes =
     positioningState.state === "ready"
@@ -110,8 +78,8 @@ const ViewsRendererContent = function ({
     <>
       <svg
         ref={svgRef}
-        width={"100%"}
-        height={"100%"}
+        width={"100dvw"}
+        height={"100dvh"}
         style={{
           position: "absolute",
           inset: 0,
@@ -178,32 +146,8 @@ const ViewsRendererContent = function ({
         </AnimatePresence>
       </motion.div>
       <ZoomButtons
-        onZoomIn={() => {
-          const zoomRoot = d3.select(
-            (svgRef as RefObject<SVGSVGElement>).current,
-          );
-          zoomRoot
-            .transition()
-            .duration(200)
-            .call(
-              (d3ZoomRef as RefObject<d3.ZoomBehavior<SVGSVGElement, unknown>>)
-                .current.scaleBy,
-              1.2,
-            );
-        }}
-        onZoomOut={() => {
-          const zoomRoot = d3.select(
-            (svgRef as RefObject<SVGSVGElement>).current,
-          );
-          zoomRoot
-            .transition()
-            .duration(200)
-            .call(
-              (d3ZoomRef as RefObject<d3.ZoomBehavior<SVGSVGElement, unknown>>)
-                .current.scaleBy,
-              1 / 1.2,
-            );
-        }}
+        onZoomIn={() => onZoom(1.2)}
+        onZoomOut={() => onZoom(1 / 1.2)}
       />
     </>
   );

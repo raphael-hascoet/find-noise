@@ -13,7 +13,6 @@ function DrawArea() {
         width: "100dvw",
         maxWidth: "100dvw",
         position: "relative",
-        padding: "16px",
       }}
     >
       <div
@@ -21,6 +20,7 @@ function DrawArea() {
           height: "100%",
           width: "100%",
           position: "relative",
+          overflow: "hidden",
         }}
       >
         <AppHeader />
