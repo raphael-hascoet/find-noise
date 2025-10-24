@@ -8,6 +8,7 @@ import {
 import type { Position } from "../../flowchart/flowchart-links";
 import {
   addChildrenToNodeInTree,
+  findNodeInTree,
   flattenNodeTreeToMap,
   removeChildrenFromNodeInTree,
   type ViewNodeDef,
@@ -262,9 +263,16 @@ const flowchartViewActionsAtomGroup = {
         albumMbid,
         newChildren,
       );
+      const newFocusedTree = findNodeInTree(updated, albumMbid);
+
+      const nodesInNewFocusedTree = newFocusedTree
+        ? Array.from(flattenNodeTreeToMap(newFocusedTree).keys())
+        : null;
+
       set(setActiveViewAtom, {
         key: "flowchart",
         data: { ...data, nodeTree: updated },
+        rezoomNodes: nodesInNewFocusedTree ?? undefined,
       });
     },
   ),

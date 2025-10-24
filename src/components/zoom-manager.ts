@@ -1,5 +1,5 @@
 import * as d3 from "d3";
-import { atom, useAtom, useAtomValue } from "jotai";
+import { atom, useAtomValue, useSetAtom } from "jotai";
 import { useMotionValue, useTransform } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, type RefObject } from "react";
 import { debounce } from "../utils/debounce";
@@ -18,11 +18,21 @@ const SCALE_EXTENT_PADDING = 0.1;
 
 type ZoomStatus = {
   status: "idle" | "rezooming-pending" | "resizing-pending";
+  rezoomNodes: string[] | null;
 };
 
 export const zoomStatusAtom = atom<ZoomStatus>({
   status: "idle",
+  rezoomNodes: null,
 });
+
+const updateZoomStatusAtom = atom(
+  null,
+  (get, set, status: ZoomStatus["status"]) => {
+    const current = get(zoomStatusAtom);
+    set(zoomStatusAtom, { ...current, status });
+  },
+);
 
 export const useZoomManager = ({
   svgRef,
@@ -31,7 +41,8 @@ export const useZoomManager = ({
 }) => {
   const d3ZoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown>>(null);
 
-  const [zoomStatus, setZoomStatus] = useAtom(zoomStatusAtom);
+  const zoomStatus = useAtomValue(zoomStatusAtom);
+  const setZoomStatus = useSetAtom(updateZoomStatusAtom);
   const nodePositioningState = useAtomValue(nodePositioningStateAtom);
 
   const isUpdatingRef = useRef(false);
@@ -46,12 +57,36 @@ export const useZoomManager = ({
 
   const minScaleExtentRef = useRef<number>(MIN_ZOOM);
 
+  const zoomFilteredPositionedNodes = useMemo(() => {
+    if (nodePositioningState.state === "ready") {
+      if (zoomStatus.rezoomNodes && zoomStatus.rezoomNodes.length > 0) {
+        const map = new Map<string, PositionedNode>();
+        zoomStatus.rezoomNodes.forEach((nodeId) => {
+          const node = nodePositioningState.positionedNodes.get(nodeId);
+          if (node) {
+            map.set(nodeId, node);
+          }
+        });
+        return map;
+      }
+      return nodePositioningState.positionedNodes;
+    }
+    return null;
+  }, [nodePositioningState, zoomStatus.rezoomNodes]);
+
   const positionedNodesBounds = useMemo(() => {
     if (nodePositioningState.state === "ready") {
       return getPositionedNodesBounds(nodePositioningState.positionedNodes);
     }
     return null;
   }, [nodePositioningState]);
+
+  const zoomFilteredNodesBounds = useMemo(() => {
+    if (zoomFilteredPositionedNodes) {
+      return getPositionedNodesBounds(zoomFilteredPositionedNodes);
+    }
+    return positionedNodesBounds;
+  }, [zoomFilteredPositionedNodes, positionedNodesBounds]);
 
   useEffect(() => {
     const zoomRoot = d3.select((svgRef as RefObject<SVGSVGElement>).current);
@@ -75,13 +110,12 @@ export const useZoomManager = ({
       zoomStatus.status === "resizing-pending" ||
       zoomStatus.status === "rezooming-pending"
     ) {
-      if (nodePositioningState.state === "in-progress" || isUpdatingRef.current)
-        return;
+      if (isUpdatingRef.current) return;
 
       if (
-        nodePositioningState.state === "ready" &&
         !!d3ZoomRef.current &&
-        !!positionedNodesBounds
+        !!positionedNodesBounds &&
+        !!zoomFilteredNodesBounds
       ) {
         const pendingStatus = zoomStatus.status;
 
@@ -89,9 +123,19 @@ export const useZoomManager = ({
 
         updateMinScaleExtent();
 
+        const zoomScale = zoomStatus.rezoomNodes
+          ? getScaleFromBoundsAndSvgSize({
+              bounds: zoomFilteredNodesBounds,
+              svgSize: {
+                width: svgRef.current?.clientWidth || 0,
+                height: svgRef.current?.clientHeight || 0,
+              },
+            })
+          : minScaleExtentRef.current;
+
         const { translateX, translateY } = getZoomTransformFromPositionedNodes({
-          bounds: positionedNodesBounds,
-          minScaleExtent: minScaleExtentRef.current,
+          bounds: zoomFilteredNodesBounds,
+          zoomScale,
         });
 
         const extentBounds = createExtentBounds({
@@ -116,15 +160,15 @@ export const useZoomManager = ({
                 d3ZoomRef.current.transform,
                 d3.zoomIdentity
                   .translate(translateX, translateY)
-                  .scale(minScaleExtentRef.current),
+                  .scale(zoomScale),
               )
               .on("end", () => {
-                setZoomStatus({ status: "idle" });
+                setZoomStatus("idle");
                 isUpdatingRef.current = false;
               });
           });
         } else {
-          setZoomStatus({ status: "idle" });
+          setZoomStatus("idle");
           isUpdatingRef.current = false;
         }
       }
@@ -179,18 +223,13 @@ export const useZoomManager = ({
     const svgWidth = svgRef.current?.clientWidth || 0;
     const svgHeight = svgRef.current?.clientHeight || 0;
 
-    const width = positionedNodesBounds.right - positionedNodesBounds.left;
-    const height = positionedNodesBounds.bottom - positionedNodesBounds.top;
-
-    const scale = Math.max(
-      Math.min(
-        (svgWidth - 2 * ZOOM_PADDING) / width,
-        (svgHeight - 2 * ZOOM_PADDING) / height,
-        MAX_ZOOM,
-      ),
-      MIN_ZOOM,
-    );
-    minScaleExtentRef.current = scale;
+    minScaleExtentRef.current = getScaleFromBoundsAndSvgSize({
+      bounds: positionedNodesBounds,
+      svgSize: {
+        width: svgWidth,
+        height: svgHeight,
+      },
+    });
   }, [positionedNodesBounds, svgRef, minScaleExtentRef]);
 
   const debouncedUpdateExtentFromResize = useMemo(
@@ -283,7 +322,7 @@ const getPositionedNodesBounds = (
 
 const getZoomTransformFromPositionedNodes = ({
   bounds,
-  minScaleExtent,
+  zoomScale,
 }: {
   bounds: {
     left: number;
@@ -291,12 +330,12 @@ const getZoomTransformFromPositionedNodes = ({
     right: number;
     bottom: number;
   };
-  minScaleExtent: number;
+  zoomScale: number;
 }) => {
-  const translateX = -bounds.left * minScaleExtent + ZOOM_PADDING;
-  const translateY = -bounds.top * minScaleExtent + ZOOM_PADDING;
+  const translateX = -bounds.left * zoomScale + ZOOM_PADDING;
+  const translateY = -bounds.top * zoomScale + ZOOM_PADDING;
 
-  return { translateX, translateY, minScaleExtent };
+  return { translateX, translateY };
 };
 
 type ExtentBounds = [[number, number], [number, number]];
@@ -360,6 +399,31 @@ const getExtentBoundsFromPositionedNodes = ({
       bottomBound + scaledZoomExtentPadding,
     ],
   ];
+};
+
+const getScaleFromBoundsAndSvgSize = ({
+  bounds,
+  svgSize,
+}: {
+  bounds: {
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+  };
+  svgSize: { width: number; height: number };
+}) => {
+  const width = bounds.right - bounds.left;
+  const height = bounds.bottom - bounds.top;
+
+  return Math.max(
+    Math.min(
+      (svgSize.width - 2 * ZOOM_PADDING) / width,
+      (svgSize.height - 2 * ZOOM_PADDING) / height,
+      MAX_ZOOM,
+    ),
+    MIN_ZOOM,
+  );
 };
 
 const nearT = (a: d3.ZoomTransform, b: d3.ZoomTransform, eps = 1e-6) =>

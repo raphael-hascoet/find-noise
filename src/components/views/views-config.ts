@@ -168,6 +168,7 @@ const calculatedNodeDefsAtom = atom((get) => {
 
 type SetActiveViewParams = ViewConfig & {
   skipRezoom?: boolean;
+  rezoomNodes?: string[];
 };
 
 export const setActiveViewAtom = atom(
@@ -184,6 +185,7 @@ export const setActiveViewAtom = atom(
 
     set(zoomStatusAtom, {
       status: config.skipRezoom ? "resizing-pending" : "rezooming-pending",
+      rezoomNodes: config.rezoomNodes || null,
     });
   },
 );
