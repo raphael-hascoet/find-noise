@@ -237,7 +237,7 @@ const FloatingTag = ({ basePos, tag, fontSize }: FloatingTagProps) => {
         },
       }}
     >
-      <text x={0} y={0} fill={tag.color} fontSize={fontSize}>
+      <text x={0} y={0} fill={tag.color} fontSize={fontSize} cursor="default">
         {tag.label}
       </text>
     </motion.g>

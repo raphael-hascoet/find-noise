@@ -3,6 +3,10 @@ import { animate, frame } from "motion";
 import { motion, useMotionValue } from "motion/react";
 import { useLayoutEffect, useRef } from "react";
 import {
+  useD3ZoomPropagationProps,
+  type PropagateEvent,
+} from "../../utils/propagate-events";
+import {
   transitioningNodesFamily,
   type PositionedNode,
 } from "../views/views-config";
@@ -14,15 +18,17 @@ import type { ViewNodeDef } from "./view-nodes-manager";
 
 export type ViewNodeProps = {
   node: PositionedNode;
+  propagateEvent: PropagateEvent;
 };
 
-export const ViewNode = ({ node }: ViewNodeProps) => {
+export const ViewNode = ({ node, propagateEvent }: ViewNodeProps) => {
   return (
     <NodeMotion
       key={node.nodeDef.id}
       left={node.position.x}
       top={node.position.y}
       nodeId={node.nodeDef.id}
+      propagateEvent={propagateEvent}
     >
       <ViewNodeContent hasPosition={true} nodeDef={node.nodeDef} />
     </NodeMotion>
@@ -33,15 +39,24 @@ function NodeMotion({
   left,
   top,
   children,
+  propagateEvent,
 }: {
   left: number;
   top: number;
   children: React.ReactNode;
   nodeId: string;
+  propagateEvent: PropagateEvent;
 }) {
+  const nodeRef = useRef<HTMLDivElement | null>(null);
+
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const prev = useRef<{ left: number; top: number }>({ left, top });
+
+  const propagationProps = useD3ZoomPropagationProps({
+    ref: nodeRef,
+    propagateEvent,
+  });
 
   useLayoutEffect(() => {
     if (left !== prev.current.left || top !== prev.current.top) {
@@ -59,6 +74,7 @@ function NodeMotion({
 
   return (
     <motion.div
+      ref={nodeRef}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -72,8 +88,10 @@ function NodeMotion({
         x: x,
         y: y,
         transformOrigin: "top left",
-        pointerEvents: "auto",
+        pointerEvents: "all",
+        cursor: "default",
       }}
+      {...propagationProps}
     >
       {children}
     </motion.div>

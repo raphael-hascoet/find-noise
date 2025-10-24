@@ -1,10 +1,11 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { ZoomIn, ZoomOut } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, type RefObject } from "react";
+import { useCallback, useEffect, useRef, type RefObject } from "react";
 import { ulid } from "ulid";
 import { D3SvgRenderer } from "../../d3/renderer";
 import { albumDataSelectorsAtom } from "../../data/albums-pool-atoms";
+import type { PropagateEvent } from "../../utils/propagate-events";
 import { FlowchartLinks } from "../flowchart/flowchart-links";
 import { ViewNode, ViewNodeContent } from "../nodes/view-node";
 import { useZoomManager } from "../zoom-manager";
@@ -74,6 +75,10 @@ const ViewsRendererContent = function ({
         ? (positioningState.transitionNodes ?? null)
         : null;
 
+  const propagateEvent = useCallback<PropagateEvent>((event) => {
+    svgRef.current?.dispatchEvent(event);
+  }, []);
+
   return (
     <>
       <svg
@@ -140,7 +145,13 @@ const ViewsRendererContent = function ({
           {visiblePositionedNodes &&
             Array.from(visiblePositionedNodes.entries()).map(
               ([nodeId, node]) => {
-                return <ViewNode key={nodeId} node={node} />;
+                return (
+                  <ViewNode
+                    key={nodeId}
+                    node={node}
+                    propagateEvent={propagateEvent}
+                  />
+                );
               },
             )}
         </AnimatePresence>

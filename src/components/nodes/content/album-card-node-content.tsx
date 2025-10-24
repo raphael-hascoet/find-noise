@@ -67,7 +67,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
           </p>
           {variant !== "albumsForArtist" && (
             <p
-              className="max-w-fulltext-center font-sans text-xs break-words text-gray-400 hover:cursor-pointer hover:underline"
+              className="max-w-fulltext-center pointer-events-auto text-center font-sans text-xs break-words text-gray-400 hover:cursor-pointer hover:underline"
               onClick={(e) => {
                 e.stopPropagation();
                 setActiveView({
@@ -103,7 +103,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                   },
                 });
               }}
-              className="cursor-pointer rounded-full bg-gray-700/60 p-1.5 text-gray-400 shadow-sm/25 shadow-gray-950 hover:bg-gray-700"
+              className="pointer-events-auto cursor-pointer rounded-full bg-gray-700/60 p-1.5 text-gray-400 shadow-sm/25 shadow-gray-950 hover:bg-gray-700"
             >
               <GitGraph width={16} height={16} />
             </button>
@@ -126,7 +126,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                   },
                 });
               }}
-              className="cursor-pointer rounded-full bg-gray-700/60 p-1.5 text-gray-400 shadow-sm/25 shadow-gray-950"
+              className="pointer-events-auto cursor-pointer rounded-full bg-gray-700/60 p-1.5 text-gray-400 shadow-sm/25 shadow-gray-950"
             >
               <ZoomIn width={16} height={16} />
             </button>
