@@ -13,9 +13,6 @@ const ZOOM_PADDING = 100;
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 1.2;
 
-const ZOOM_EXTENT_PADDING = 100;
-const SCALE_EXTENT_PADDING = 0.1;
-
 type ZoomStatus = {
   status: "idle" | "rezooming-pending" | "resizing-pending";
   rezoomNodes: string[] | null;
@@ -183,8 +180,6 @@ export const useZoomManager = ({
       const svgHeight = svgRef.current?.clientHeight || 0;
       const svgWidth = svgRef.current?.clientWidth || 0;
 
-      console.log({ svgHeight, svgWidth });
-
       return getExtentBoundsFromPositionedNodes({
         bounds: positionedNodesBounds,
         svgSize: {
@@ -210,7 +205,7 @@ export const useZoomManager = ({
       }
       console.log("Update extent bounds:", { scale, extentBounds });
       d3ZoomRef.current
-        .scaleExtent([scale - SCALE_EXTENT_PADDING, MAX_ZOOM])
+        .scaleExtent([Math.max(scale, MIN_ZOOM), MAX_ZOOM])
         .translateExtent(extentBounds);
     },
     [d3ZoomRef],
@@ -264,10 +259,14 @@ export const useZoomManager = ({
           extentBounds,
         );
 
-        if (!nearT(currentTransform, clamped)) {
+        if (
+          !nearTransform(currentTransform, clamped) ||
+          !nearFloat(currentScale, clamped.k)
+        ) {
           const zoomRoot = d3.select(
             (svgRef as RefObject<SVGSVGElement>).current,
           );
+
           zoomRoot
             .transition()
             .duration(300)
@@ -387,17 +386,9 @@ const getExtentBoundsFromPositionedNodes = ({
     contentAreaSizeMaxScale.height,
   );
 
-  const scaledZoomExtentPadding = ZOOM_EXTENT_PADDING / scale;
-
   return [
-    [
-      bounds.left - padContentX - scaledZoomExtentPadding,
-      bounds.top - padContentY - scaledZoomExtentPadding,
-    ],
-    [
-      rightBound + scaledZoomExtentPadding,
-      bottomBound + scaledZoomExtentPadding,
-    ],
+    [bounds.left - padContentX, bounds.top - padContentY],
+    [rightBound, bottomBound],
   ];
 };
 
@@ -426,7 +417,9 @@ const getScaleFromBoundsAndSvgSize = ({
   );
 };
 
-const nearT = (a: d3.ZoomTransform, b: d3.ZoomTransform, eps = 1e-6) =>
+const nearFloat = (a: number, b: number, eps = 1e-6) => Math.abs(a - b) <= eps;
+
+const nearTransform = (a: d3.ZoomTransform, b: d3.ZoomTransform, eps = 1e-6) =>
   Math.abs(a.k - b.k) <= eps &&
   Math.abs(a.x - b.x) <= eps &&
   Math.abs(a.y - b.y) <= eps;
