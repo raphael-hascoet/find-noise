@@ -11,7 +11,7 @@ import {
   type NodeDimensions,
 } from "../nodes/view-node-dimensions";
 import { type ViewNodeDef } from "../nodes/view-nodes-manager";
-import { zoomStatusAtom } from "../zoom-manager";
+import { updateZoomStatusOnViewChange } from "../zoom-manager";
 import { viewBuilders } from "./view-builders";
 
 export type ViewKeyToDefinition = {
@@ -183,7 +183,7 @@ export const setActiveViewAtom = atom(
     }
     set(activeViewConfigAtom, config);
 
-    set(zoomStatusAtom, {
+    set(updateZoomStatusOnViewChange, {
       status: config.skipRezoom ? "resizing-pending" : "rezooming-pending",
       rezoomNodes: config.rezoomNodes || null,
     });

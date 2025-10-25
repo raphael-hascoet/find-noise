@@ -2,6 +2,7 @@ import * as d3 from "d3";
 import { atom, useAtomValue, useSetAtom } from "jotai";
 import { useMotionValue, useTransform } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, type RefObject } from "react";
+import { ulid } from "ulid";
 import { debounce } from "../utils/debounce";
 import {
   nodePositioningStateAtom,
@@ -13,21 +14,30 @@ const ZOOM_PADDING = 100;
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 1.2;
 
-type ZoomStatus = {
-  status: "idle" | "rezooming-pending" | "resizing-pending";
-  rezoomNodes: string[] | null;
+type ZoomStatusIdle = {
+  status: "idle";
 };
 
-export const zoomStatusAtom = atom<ZoomStatus>({
+type ZoomStatusPending = {
+  status: "rezooming-pending" | "resizing-pending";
+  rezoomNodes: string[] | null;
+  pendingId: string;
+};
+
+type ZoomStatus = ZoomStatusIdle | ZoomStatusPending;
+
+const zoomStatusAtom = atom<ZoomStatus>({
   status: "idle",
-  rezoomNodes: null,
 });
 
-const updateZoomStatusAtom = atom(
+const updateZoomStatusToIdle = atom(null, (_, set) => {
+  set(zoomStatusAtom, { status: "idle" });
+});
+
+export const updateZoomStatusOnViewChange = atom(
   null,
-  (get, set, status: ZoomStatus["status"]) => {
-    const current = get(zoomStatusAtom);
-    set(zoomStatusAtom, { ...current, status });
+  (_, set, statusOptions: Omit<ZoomStatusPending, "pendingId">) => {
+    set(zoomStatusAtom, { ...statusOptions, pendingId: ulid() });
   },
 );
 
@@ -39,10 +49,10 @@ export const useZoomManager = ({
   const d3ZoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown>>(null);
 
   const zoomStatus = useAtomValue(zoomStatusAtom);
-  const setZoomStatus = useSetAtom(updateZoomStatusAtom);
+  const setZoomStatusToIdle = useSetAtom(updateZoomStatusToIdle);
   const nodePositioningState = useAtomValue(nodePositioningStateAtom);
 
-  const isUpdatingRef = useRef(false);
+  const currentTransitionIdRef = useRef<string | null>(null);
 
   const tx = useMotionValue(0);
   const ty = useMotionValue(0);
@@ -55,7 +65,10 @@ export const useZoomManager = ({
   const minScaleExtentRef = useRef<number>(MIN_ZOOM);
 
   const zoomFilteredPositionedNodes = useMemo(() => {
-    if (nodePositioningState.state === "ready") {
+    if (
+      nodePositioningState.state === "ready" &&
+      zoomStatus.status === "rezooming-pending"
+    ) {
       if (zoomStatus.rezoomNodes && zoomStatus.rezoomNodes.length > 0) {
         const map = new Map<string, PositionedNode>();
         zoomStatus.rezoomNodes.forEach((nodeId) => {
@@ -69,7 +82,7 @@ export const useZoomManager = ({
       return nodePositioningState.positionedNodes;
     }
     return null;
-  }, [nodePositioningState, zoomStatus.rezoomNodes]);
+  }, [nodePositioningState, zoomStatus]);
 
   const positionedNodesBounds = useMemo(() => {
     if (nodePositioningState.state === "ready") {
@@ -107,7 +120,7 @@ export const useZoomManager = ({
       zoomStatus.status === "resizing-pending" ||
       zoomStatus.status === "rezooming-pending"
     ) {
-      if (isUpdatingRef.current) return;
+      if (currentTransitionIdRef.current) return;
 
       if (
         !!d3ZoomRef.current &&
@@ -116,7 +129,7 @@ export const useZoomManager = ({
       ) {
         const pendingStatus = zoomStatus.status;
 
-        isUpdatingRef.current = true;
+        currentTransitionIdRef.current = zoomStatus.pendingId;
 
         updateMinScaleExtent();
 
@@ -160,13 +173,28 @@ export const useZoomManager = ({
                   .scale(zoomScale),
               )
               .on("end", () => {
-                setZoomStatus("idle");
-                isUpdatingRef.current = false;
+                console.log("Rezoom complete");
+                setZoomStatusToIdle();
+                currentTransitionIdRef.current = null;
+              })
+              .on("interrupt", () => {
+                console.log("Rezoom interrupted");
+                if (currentTransitionIdRef.current === zoomStatus.pendingId) {
+                  setZoomStatusToIdle();
+                  currentTransitionIdRef.current = null;
+                }
+              })
+              .on("cancel", () => {
+                console.log("Rezoom cancelled");
+                if (currentTransitionIdRef.current === zoomStatus.pendingId) {
+                  setZoomStatusToIdle();
+                  currentTransitionIdRef.current = null;
+                }
               });
           });
         } else {
-          setZoomStatus("idle");
-          isUpdatingRef.current = false;
+          setZoomStatusToIdle();
+          currentTransitionIdRef.current = null;
         }
       }
     }
