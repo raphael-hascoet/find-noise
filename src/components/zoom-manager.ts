@@ -291,15 +291,18 @@ export const useZoomManager = ({
           !nearTransform(currentTransform, clamped) ||
           !nearFloat(currentScale, clamped.k)
         ) {
-          const zoomRoot = d3.select(
-            (svgRef as RefObject<SVGSVGElement>).current,
-          );
+          requestAnimationFrame(() => {
+            if (!d3ZoomRef.current) return;
+            const zoomRoot = d3.select(
+              (svgRef as RefObject<SVGSVGElement>).current,
+            );
 
-          zoomRoot
-            .transition()
-            .duration(300)
-            .ease(d3.easeSinInOut)
-            .call(d3ZoomRef.current.transform, clamped);
+            zoomRoot
+              .transition()
+              .duration(300)
+              .ease(d3.easeSinInOut)
+              .call(d3ZoomRef.current.transform, clamped);
+          });
         }
       }, 200),
     [createExtentBounds, updateExtentBounds],
