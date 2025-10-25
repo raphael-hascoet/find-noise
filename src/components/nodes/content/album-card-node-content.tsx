@@ -1,12 +1,12 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { GitGraph, ZoomIn } from "lucide-react";
 import { memo } from "react";
-import { getAlbumCoverUrl } from "../../../data/album-cover-urls";
 import { albumDataSelectorsAtom } from "../../../data/albums-pool-atoms";
 import type { SimpleRecommendation } from "../../../data/get-albums-recommendations";
 import { useFlowchartViewActions } from "../../views/builders/flowchart-view";
 import { setActiveViewAtom } from "../../views/views-config";
 import type { AlbumContext } from "../view-nodes-manager";
+import { AlbumCardCoverImage } from "./album-card-cover-image";
 import { NodeCard } from "./node-card";
 import {
   NodeContentWrapper,
@@ -46,20 +46,16 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
     return null;
   }
 
-  const coverUrl = getAlbumCoverUrl(graphNodeProps.nodeId);
-
   const { variant } = context.data;
 
   return (
     <NodeContentWrapper {...graphNodeProps}>
       <NodeCard>
         <div className="flex min-h-20 w-32 min-w-32 flex-col items-center gap-2">
-          <div className="h-32 max-h-32 overflow-hidden">
-            <img
-              className="h-auto w-full"
-              src={coverUrl}
-              alt={album ? album.release : "Unknown Album"}
-              draggable={false}
+          <div className="flex h-32 max-h-32 w-32 overflow-hidden">
+            <AlbumCardCoverImage
+              nodeId={graphNodeProps.nodeId}
+              albumName={album ? album.release : "Unknown Album"}
             />
           </div>
           <p className="max-w-full text-center font-sans text-sm break-words text-gray-300">
