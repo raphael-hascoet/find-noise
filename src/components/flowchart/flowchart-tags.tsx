@@ -1,6 +1,7 @@
 import { animate, frame } from "motion";
 import { motion, useMotionValue } from "motion/react";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { COLORS } from "../../constants/colors";
 import type { SimpleReason } from "../../data/get-albums-recommendations";
 import { seededRandom } from "../../utils/seeded-random";
 import type { LinkLineDefWithTags, Position } from "./flowchart-links";
@@ -26,8 +27,6 @@ const TAG_REASONING_ORDER = {
     secondaryToSecondaryGenre: 3,
   },
 } as const;
-
-const DEFAULT_COLOR = "#ccc";
 
 const MAX_TAGS_COUNT = 4;
 
@@ -237,9 +236,38 @@ const FloatingTag = ({ basePos, tag, fontSize }: FloatingTagProps) => {
         },
       }}
     >
-      <text x={0} y={0} fill={tag.color} fontSize={fontSize} cursor="default">
+      <text
+        x={0}
+        y={0}
+        fill={tag.color}
+        fontSize={fontSize}
+        cursor="default"
+        filter={`url(#shadow-${tag.label.replace(/\s+/g, "-")})`}
+      >
         {tag.label}
       </text>
+      <filter
+        id={`shadow-${tag.label.replace(/\s+/g, "-")}`}
+        x="-60%"
+        y="-60%"
+        width="220%"
+        height="220%"
+        filterUnits="objectBoundingBox"
+      >
+        <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur" />
+        <feFlood floodColor={tag.color} floodOpacity="0.5" result="color" />
+        <feOffset in="blur" dx={0} dy={0} result="offsetBlur" />
+        <feComposite
+          in="color"
+          in2="offsetBlur"
+          operator="in"
+          result="coloredBlur"
+        />
+        <feMerge>
+          <feMergeNode in="coloredBlur" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
     </motion.g>
   );
 };
@@ -255,7 +283,7 @@ export const getTagsFromReasoning = (
       genreTags.push({
         order: TAG_REASONING_ORDER.genres.primaryToPrimaryGenre,
         def: {
-          color: DEFAULT_COLOR, // TODO: Apply color fitting genres/descriptors
+          color: COLORS.tagsPrimaryGenre,
           label: genre,
         },
       }),
@@ -267,7 +295,7 @@ export const getTagsFromReasoning = (
       genreTags.push({
         order: TAG_REASONING_ORDER.genres.primaryToSecondaryGenre,
         def: {
-          color: DEFAULT_COLOR,
+          color: COLORS.tagsSecondaryGenre,
           label: genre,
         },
       }),
@@ -279,7 +307,7 @@ export const getTagsFromReasoning = (
       genreTags.push({
         order: TAG_REASONING_ORDER.genres.primaryToSecondaryGenre,
         def: {
-          color: DEFAULT_COLOR,
+          color: COLORS.tagsSecondaryGenre,
           label: genre,
         },
       }),
@@ -291,7 +319,7 @@ export const getTagsFromReasoning = (
       genreTags.push({
         order: TAG_REASONING_ORDER.genres.secondaryToSecondaryGenre,
         def: {
-          color: DEFAULT_COLOR,
+          color: COLORS.tagsSecondaryGenre,
           label: genre,
         },
       }),
@@ -318,7 +346,7 @@ export const getTagsFromReasoning = (
   const descriptorTags: TagDef[] = reasoning.descriptorOverlap.shared
     .map((descriptor) => {
       return {
-        color: DEFAULT_COLOR,
+        color: COLORS.tagsDescriptor,
         label: descriptor,
       };
     })

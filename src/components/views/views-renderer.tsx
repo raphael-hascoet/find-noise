@@ -3,6 +3,7 @@ import { ZoomIn, ZoomOut } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, type RefObject } from "react";
 import { ulid } from "ulid";
+import { COLORS } from "../../constants/colors";
 import { D3SvgRenderer } from "../../d3/renderer";
 import { albumDataSelectorsAtom } from "../../data/albums-pool-atoms";
 import type { PropagateEvent } from "../../utils/propagate-events";
@@ -62,7 +63,7 @@ const ViewsRendererContent = function ({
         svgRef as RefObject<SVGSVGElement>,
       );
     }
-  }, []);
+  }, [COLORS]);
 
   const { overlayTransform, onZoom } = useZoomManager({
     svgRef,

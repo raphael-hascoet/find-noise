@@ -24,7 +24,7 @@ function DrawArea() {
         }}
       >
         <AppHeader />
-        <ViewsRenderer showDebugGrid />
+        <ViewsRenderer showDebugGrid={false} />
       </div>
     </div>
   );

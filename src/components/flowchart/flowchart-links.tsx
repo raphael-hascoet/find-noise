@@ -1,6 +1,7 @@
 import { atom, useAtomValue } from "jotai";
 import { animate, frame, motion, useMotionValue } from "motion/react";
 import { Fragment, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { COLORS } from "../../constants/colors";
 import type { PositionedNode } from "../views/views-config";
 import { getTagsFromReasoning, TagCloud, type TagDef } from "./flowchart-tags";
 
@@ -217,13 +218,13 @@ function AnimatedSegment({
       y1={y1}
       x2={x2}
       y2={y2}
-      stroke="#999"
+      stroke={COLORS.links}
       strokeWidth={4}
       strokeLinecap="round"
       markerEnd={seg.isArrow ? "url(#link-arrow)" : undefined}
       style={{ pointerEvents: "none" }}
       initial={{ pathLength: 0, opacity: 0 }}
-      animate={{ pathLength: canReveal ? 1 : 0, opacity: canReveal ? 1 : 0 }}
+      animate={{ pathLength: canReveal ? 1 : 0, opacity: canReveal ? 0.8 : 0 }}
       transition={{
         opacity: {
           duration: 0,

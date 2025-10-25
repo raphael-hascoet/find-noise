@@ -1,5 +1,6 @@
 import * as d3 from "d3";
 import React from "react";
+import { COLORS } from "../constants/colors";
 
 type D3RendererDef = (renderer: D3SvgRenderer) => void;
 
@@ -24,7 +25,7 @@ const allDefs: D3RendererDef[] = [
       .attr("y1", (d) => d.y1)
       .attr("x2", (d) => d.x2)
       .attr("y2", (d) => d.y2)
-      .attr("stroke", "#999")
+      .attr("stroke", COLORS.links)
       .attr("stroke-width", 1.2)
       .attr("stroke-linecap", "round");
   },
