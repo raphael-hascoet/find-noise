@@ -17,18 +17,18 @@ export const AlbumCardCoverImage = ({
   return (
     <div style={{ position: "relative", width: "100%" }}>
       {!loaded && !error && (
-        <motion.div
+        <div
           style={{
             position: "absolute",
-            inset: 0,
+            inset: 2,
             display: "grid",
             placeItems: "center",
           }}
         >
           <motion.div
             style={{
-              width: 120,
-              height: 120,
+              width: "100%",
+              height: "100%",
               borderRadius: 4,
               background: "white",
               outline: "1px solid transparent",
@@ -41,9 +41,8 @@ export const AlbumCardCoverImage = ({
               repeat: Infinity,
             }}
           />
-        </motion.div>
+        </div>
       )}
-
       {!error && (
         <img
           src={coverUrl}
@@ -63,7 +62,14 @@ export const AlbumCardCoverImage = ({
       )}
 
       {error && (
-        <div className="w-full items-center justify-items-center">
+        <div
+          style={{
+            position: "absolute",
+            inset: 8,
+            display: "grid",
+            placeItems: "center",
+          }}
+        >
           <ImageLoadFailFallback />{" "}
         </div>
       )}
@@ -74,8 +80,6 @@ export const AlbumCardCoverImage = ({
 const ImageLoadFailFallback = () => {
   return (
     <svg
-      width="120"
-      height="120"
       viewBox="0 0 160 160"
       xmlns="http://www.w3.org/2000/svg"
       aria-label="Home view"

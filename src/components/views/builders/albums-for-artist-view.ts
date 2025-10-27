@@ -35,7 +35,7 @@ export const albumsForArtistView: Atom<ViewBuilder<"albumsForArtist">> = atom(
               data: {
                 artist: album["artist-mbid"],
                 title: album.release,
-                variant: "albumsForArtist",
+                parentView: "albumsForArtist",
               },
             },
           },

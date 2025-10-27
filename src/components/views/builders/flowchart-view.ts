@@ -38,7 +38,8 @@ export const flowchartView: Atom<ViewBuilder<"flowchart">> = atom({
         data: {
           artist: album["artist-mbid"],
           title: album.release,
-          variant: "flowchart",
+          parentView: "flowchart",
+          variant: "detailed",
         },
       },
     };
@@ -236,7 +237,7 @@ const flowchartViewActionsAtomGroup = {
             data: {
               artist: seed["artist-mbid"],
               title: seed.release,
-              variant: "flowchart",
+              parentView: "flowchart",
             },
           },
         } as ViewNodeDef);
@@ -249,7 +250,7 @@ const flowchartViewActionsAtomGroup = {
               data: {
                 artist: rec.album["artist-mbid"],
                 title: rec.album.release,
-                variant: "flowchart",
+                parentView: "flowchart",
                 recommendation: {
                   reason: rec.reason,
                   score: rec.score,

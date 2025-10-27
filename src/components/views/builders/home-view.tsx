@@ -49,7 +49,7 @@ export const homeView: Atom<ViewBuilder<"home">> = atom(() => ({
               data: {
                 artist: album.artist,
                 title: album.release,
-                variant: "home",
+                parentView: "home",
               },
             },
           },
