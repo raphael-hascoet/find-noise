@@ -70,7 +70,7 @@ export const NodeContentWrapper = ({
   }, [throttledUpdateNodeDimensions]);
 
   return (
-    <div ref={ref} className="h-fit w-fit">
+    <div ref={ref} className="max-h-fit max-w-fit">
       {children}
     </div>
   );
