@@ -41,6 +41,16 @@ export const updateZoomStatusOnViewChange = atom(
   },
 );
 
+export const updateZoomBoundariesIfIdle = atom(null, (get, set) => {
+  const zoomStatus = get(zoomStatusAtom);
+  if (zoomStatus.status === "idle") {
+    set(updateZoomStatusOnViewChange, {
+      status: "resizing-pending",
+      rezoomNodes: null,
+    });
+  }
+});
+
 export const useZoomManager = ({
   svgRef,
 }: {

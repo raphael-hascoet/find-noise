@@ -1,7 +1,7 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { GitGraph, ZoomIn } from "lucide-react";
 import { motion } from "motion/react";
-import { memo } from "react";
+import { Fragment, memo } from "react";
 import { COLORS } from "../../../constants/colors";
 import {
   albumDataSelectorsAtom,
@@ -51,7 +51,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
   context,
   ...graphNodeProps
 }: AlbumCardProps) {
-  const { addRecommendationsToNode } = useFlowchartViewActions();
+  const { addRecommendationsToNode, focusNode } = useFlowchartViewActions();
 
   const selectors = useAtomValue(albumDataSelectorsAtom);
 
@@ -91,7 +91,8 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
             },
           }}
         >
-          <div className="flex flex-col items-center gap-2">
+          {/* {graphNodeProps.nodeId} */}
+          <div className="flex w-full min-w-0 flex-col items-center gap-2">
             <motion.div
               className="flex overflow-hidden"
               initial={false}
@@ -109,7 +110,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                 albumName={album ? album.release : "Unknown Album"}
               />
             </motion.div>
-            <div className="flex flex-col items-center gap-2 pt-1">
+            <div className="flex w-full min-w-0 flex-col items-center gap-2 pt-1">
               <motion.p
                 className="max-w-full text-center font-sans break-words text-gray-300"
                 variants={{
@@ -215,6 +216,10 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                if (parentView === "flowchart") {
+                  focusNode(graphNodeProps.nodeId);
+                  return;
+                }
                 setActiveView({
                   key: "flowchart",
                   data: {
@@ -247,7 +252,8 @@ const useContentOptionsForAlbumCard = ({
     showZoomInButton:
       parentView === "home" ||
       parentView === "search" ||
-      parentView === "albumsForArtist",
+      parentView === "albumsForArtist" ||
+      variant === "compact",
     showDetailedGenresAndDescriptors: variant === "detailed",
   };
 
@@ -255,16 +261,25 @@ const useContentOptionsForAlbumCard = ({
 };
 
 const AlbumCardDetailedGenresAndDescriptors = ({ album }: { album: Album }) => {
-  console.log(rgbWithOpacity(COLORS.tagsPrimaryGenre, 0.1));
   return (
-    <div className="flex flex-col items-center gap-2">
+    <motion.div
+      className="flex flex-col items-center gap-2"
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      transition={{
+        opacity: {
+          delay: 0.3,
+        },
+      }}
+      style={{ overflow: "hidden" }}
+    >
       <motion.div
         className="grid w-full gap-2"
         style={{
           gridTemplateColumns: "1fr 1fr",
         }}
       >
-        {album["primary-genres"] && (
+        {!!album["primary-genres"].length && (
           <div className="flex flex-col gap-2 pr-2">
             <span className="font-sans text-xs font-semibold text-gray-200">
               Primary Genres
@@ -277,11 +292,18 @@ const AlbumCardDetailedGenresAndDescriptors = ({ album }: { album: Album }) => {
               }}
               className="rounded-lg p-2 text-xs"
             >
-              {album["primary-genres"].join(", ")}
+              {album["primary-genres"].map((genre, index) => (
+                <Fragment key={genre}>
+                  <span className="text-nowrap">{genre}</span>
+                  {index < album["primary-genres"].length - 1 ? (
+                    <span>, </span>
+                  ) : null}
+                </Fragment>
+              ))}
             </div>
           </div>
         )}
-        {album["secondary-genres"] && (
+        {!!album["secondary-genres"].length && (
           <div className="flex flex-col gap-2 pr-2">
             <span className="font-sans text-xs font-semibold text-gray-200">
               Secondary Genres
@@ -295,16 +317,18 @@ const AlbumCardDetailedGenresAndDescriptors = ({ album }: { album: Album }) => {
               className="rounded-lg p-2 text-xs"
             >
               {album["secondary-genres"].map((genre, index) => (
-                <>
+                <Fragment key={genre}>
                   <span className="text-nowrap">{genre}</span>
-                  {index < album["secondary-genres"].length - 1 ? ", " : ""}
-                </>
+                  {index < album["secondary-genres"].length - 1 ? (
+                    <span>, </span>
+                  ) : null}
+                </Fragment>
               ))}
             </div>
           </div>
         )}
       </motion.div>
-      {album.descriptors && (
+      {!!album.descriptors.length && (
         <div className="flex w-full flex-col gap-2">
           <span className="font-sans text-xs font-semibold text-gray-200">
             Descriptors
@@ -321,6 +345,6 @@ const AlbumCardDetailedGenresAndDescriptors = ({ album }: { album: Album }) => {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
