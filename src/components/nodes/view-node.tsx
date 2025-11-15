@@ -1,6 +1,6 @@
 import { useAtomValue } from "jotai";
 import { animate, frame } from "motion";
-import { motion, useMotionValue } from "motion/react";
+import { motion, useMotionValue, useTransform } from "motion/react";
 import { useLayoutEffect, useRef } from "react";
 import {
   useD3ZoomPropagationProps,
@@ -40,8 +40,6 @@ export const ViewNode = ({ node, propagateEvent }: ViewNodeProps) => {
 function NodeMotion({
   left,
   top,
-  width,
-  height,
   children,
   propagateEvent,
 }: {
@@ -57,6 +55,12 @@ function NodeMotion({
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
+
+  // Combine centering transform with motion transforms
+  const transform = useTransform(
+    [x, y],
+    ([xVal, yVal]) => `translate(-50%, -50%) translate(${xVal}px, ${yVal}px)`,
+  );
   const prev = useRef<{ left: number; top: number }>({ left, top });
 
   const propagationProps = useD3ZoomPropagationProps({
@@ -89,10 +93,9 @@ function NodeMotion({
       }}
       style={{
         position: "absolute",
-        left: left - width / 2,
-        top: top - height / 2,
-        x: x,
-        y: y,
+        left: left,
+        top: top,
+        transform,
         transformOrigin: "center",
         pointerEvents: "all",
         cursor: "default",
