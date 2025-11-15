@@ -72,7 +72,6 @@ export const flowchartView: Atom<ViewBuilder<"flowchart">> = atom({
     }
 
     const widthRequiredPerNode = new Map<string, number>();
-    const heightPerDepth: number[] = [];
 
     const handleChildrenWidthReqs = ({
       node,
@@ -89,10 +88,6 @@ export const flowchartView: Atom<ViewBuilder<"flowchart">> = atom({
         return { widthRequired: extremityWidthRequired };
       }
 
-      heightPerDepth[depth] = Math.max(
-        heightPerDepth[depth] ?? 0,
-        node.dimensions?.height ?? 0,
-      );
 
       let widthRequired = 0;
       node.nodeDef.children.forEach((child) => {
@@ -118,11 +113,6 @@ export const flowchartView: Atom<ViewBuilder<"flowchart">> = atom({
       node: albumNode,
     });
 
-    let yForDepth: number[] = [0];
-
-    heightPerDepth.forEach((heightForDepth, depth) => {
-      yForDepth[depth + 1] = yForDepth[depth] + heightForDepth + MARGIN_Y_NODES;
-    });
     const handlePositionsForNodes = ({
       nodeDef,
       originPos = { x: 0, y: 0 },
@@ -137,7 +127,8 @@ export const flowchartView: Atom<ViewBuilder<"flowchart">> = atom({
         return;
       }
 
-      const childrenY = yForDepth[depth + 1] ?? 0;
+      const parentHeight = nodeDefsWithDimensions.get(nodeDef.id)?.dimensions.height ?? 0;
+      const childrenY = originPos.y + parentHeight / 2 + MARGIN_Y_NODES;
 
       const totalChildrenWidth =
         nodeDef.children.reduce(
@@ -151,9 +142,11 @@ export const flowchartView: Atom<ViewBuilder<"flowchart">> = atom({
       nodeDef.children?.forEach((child) => {
         const childWidthRequired = widthRequiredPerNode.get(child.id) ?? 0;
 
+        const childNode = nodeDefsWithDimensions.get(child.id);
+        const childHeight = childNode?.dimensions.height ?? 0;
         const childOriginPos = {
           x: nextX + childWidthRequired / 2,
-          y: childrenY,
+          y: childrenY + childHeight / 2,
         };
 
         handlePositionsForNodes({
@@ -182,11 +175,17 @@ export const flowchartView: Atom<ViewBuilder<"flowchart">> = atom({
       }
       positionMap.set(nodeDef.id, {
         x: centeredPosition,
-        y: yForDepth[depth] ?? 0,
+        y: originPos.y,
       });
     };
 
-    handlePositionsForNodes({ nodeDef: albumNode.nodeDef });
+    handlePositionsForNodes({ 
+      nodeDef: albumNode.nodeDef, 
+      originPos: { 
+        x: albumNode.dimensions.width / 2, 
+        y: albumNode.dimensions.height / 2 
+      } 
+    });
 
     return positionMap;
   },
