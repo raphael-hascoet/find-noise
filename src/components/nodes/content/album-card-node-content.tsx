@@ -1,12 +1,18 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { GitGraph, ZoomIn } from "lucide-react";
-import { memo } from "react";
-import { getAlbumCoverUrl } from "../../../data/album-cover-urls";
-import { albumDataSelectorsAtom } from "../../../data/albums-pool-atoms";
+import { motion } from "motion/react";
+import { Fragment, memo } from "react";
+import { COLORS } from "../../../constants/colors";
+import {
+  albumDataSelectorsAtom,
+  type Album,
+} from "../../../data/albums-pool-atoms";
 import type { SimpleRecommendation } from "../../../data/get-albums-recommendations";
+import { rgbWithOpacity } from "../../../utils/colors";
 import { useFlowchartViewActions } from "../../views/builders/flowchart-view";
 import { setActiveViewAtom } from "../../views/views-config";
 import type { AlbumContext } from "../view-nodes-manager";
+import { AlbumCardCoverImage } from "./album-card-cover-image";
 import { NodeCard } from "./node-card";
 import {
   NodeContentWrapper,
@@ -17,24 +23,35 @@ type AlbumCardProps = {
   context: AlbumContext;
 } & NodeContentWrapperPropsBase;
 
+export type AlbumCardVariant = "compact" | "detailed";
+
 export type AlbumCardContextData = {
   title: string;
   artist: string;
-  variant: AlbumCardVariant;
+  parentView: AlbumCardParentView;
+  variant?: AlbumCardVariant;
   recommendation?: Omit<SimpleRecommendation, "album">;
 };
 
-export type AlbumCardVariant =
+export type AlbumCardParentView =
   | "flowchart"
   | "albumsForArtist"
   | "home"
   | "search";
 
+type AlbumCardContentOptions = {
+  showArtistName: boolean;
+  showAddRecommendationsButton: boolean;
+  showReleaseYear: boolean;
+  showZoomInButton: boolean;
+  showDetailedGenresAndDescriptors: boolean;
+};
+
 export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
   context,
   ...graphNodeProps
 }: AlbumCardProps) {
-  const { addRecommendationsToNode } = useFlowchartViewActions();
+  const { addRecommendationsToNode, focusNode } = useFlowchartViewActions();
 
   const selectors = useAtomValue(albumDataSelectorsAtom);
 
@@ -46,42 +63,129 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
     return null;
   }
 
-  const coverUrl = getAlbumCoverUrl(graphNodeProps.nodeId);
+  const { parentView, variant = "compact" } = context.data;
 
-  const { variant } = context.data;
+  const {
+    showArtistName,
+    showAddRecommendationsButton,
+    showReleaseYear,
+    showZoomInButton,
+    showDetailedGenresAndDescriptors,
+  } = useContentOptionsForAlbumCard({ parentView, variant });
 
   return (
     <NodeContentWrapper {...graphNodeProps}>
       <NodeCard>
-        <div className="flex min-h-20 w-32 min-w-32 flex-col items-center gap-2">
-          <div className="h-32 max-h-32 overflow-hidden">
-            <img
-              className="h-auto w-full"
-              src={coverUrl}
-              alt={album ? album.release : "Unknown Album"}
-              draggable={false}
-            />
-          </div>
-          <p className="max-w-full text-center font-sans text-sm break-words text-gray-300">
-            {album ? album.release : "Unknown Album"}
-          </p>
-          {variant !== "albumsForArtist" && (
-            <p
-              className="max-w-fulltext-center pointer-events-auto text-center font-sans text-xs break-words text-gray-400 hover:cursor-pointer hover:underline"
-              onClick={(e) => {
-                e.stopPropagation();
-                setActiveView({
-                  key: "albumsForArtist",
-                  data: {
-                    artistId: album?.["artist-mbid"],
-                  },
-                });
+        <motion.div
+          className="flex min-h-20 flex-col items-center gap-4"
+          animate={variant}
+          initial={false}
+          variants={{
+            compact: {
+              width: "8rem",
+              maxWidth: "8rem",
+            },
+            detailed: {
+              width: "24rem",
+              maxWidth: "24rem",
+            },
+          }}
+        >
+          {/* {graphNodeProps.nodeId} */}
+          <div className="flex w-full min-w-0 flex-col items-center gap-2">
+            <motion.div
+              className="flex overflow-hidden"
+              initial={false}
+              variants={{
+                compact: { width: "8rem", height: "8rem", maxWidth: "8rem" },
+                detailed: {
+                  width: "12rem",
+                  height: "12rem",
+                  maxWidth: "12rem",
+                },
               }}
             >
-              {album ? album.artist : "Unknown Artist"}
-            </p>
+              <AlbumCardCoverImage
+                nodeId={graphNodeProps.nodeId}
+                albumName={album ? album.release : "Unknown Album"}
+              />
+            </motion.div>
+            <div className="flex w-full min-w-0 flex-col items-center gap-2 pt-1">
+              <motion.p
+                className="max-w-full text-center font-sans break-words text-gray-300"
+                variants={{
+                  compact: { fontSize: "var(--text-xs)" },
+                  detailed: { fontSize: "var(--text-sm)" },
+                }}
+              >
+                {album ? album.release : "Unknown Album"}
+              </motion.p>
+              <motion.div
+                className="flex items-center"
+                initial={false}
+                variants={{
+                  compact: {
+                    flexDirection: "column",
+                    gap: "0.25em",
+                  },
+                  detailed: {
+                    flexDirection: "row",
+                    gap: "0.25em",
+                  },
+                }}
+              >
+                {showArtistName && (
+                  <motion.p
+                    className="pointer-events-auto max-w-full text-center font-sans break-words text-gray-400 hover:cursor-pointer hover:underline"
+                    variants={{
+                      compact: { fontSize: "var(--text-xs)" },
+                      detailed: { fontSize: "var(--text-sm)" },
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveView({
+                        key: "albumsForArtist",
+                        data: {
+                          artistId: album?.["artist-mbid"],
+                        },
+                      });
+                    }}
+                  >
+                    {album ? album.artist : "Unknown Artist"}
+                  </motion.p>
+                )}
+                {variant === "detailed" &&
+                  showArtistName &&
+                  showReleaseYear && (
+                    <motion.span
+                      className="text-gray-500"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      -
+                    </motion.span>
+                  )}
+                {showReleaseYear && (
+                  <motion.p
+                    className="text-center font-sans text-gray-400"
+                    variants={{
+                      compact: { fontSize: "var(--text-xs)" },
+                      detailed: { fontSize: "var(--text-sm)" },
+                    }}
+                  >
+                    {album
+                      ? album["release-date"].split("-")[0]
+                      : "Unknown Release Date"}
+                  </motion.p>
+                )}
+              </motion.div>
+            </div>
+          </div>
+          {showDetailedGenresAndDescriptors && (
+            <AlbumCardDetailedGenresAndDescriptors album={album} />
           )}
-          {variant === "flowchart" && (
+          {showAddRecommendationsButton && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -108,17 +212,14 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
               <GitGraph width={16} height={16} />
             </button>
           )}
-          {variant === "albumsForArtist" && (
-            <p className="text-center font-sans text-xs text-gray-400">
-              {album
-                ? album["release-date"].split("-")[0]
-                : "Unknown Release Date"}
-            </p>
-          )}
-          {variant !== "flowchart" && (
+          {showZoomInButton && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                if (parentView === "flowchart") {
+                  focusNode(graphNodeProps.nodeId);
+                  return;
+                }
                 setActiveView({
                   key: "flowchart",
                   data: {
@@ -131,8 +232,119 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
               <ZoomIn width={16} height={16} />
             </button>
           )}
-        </div>
+        </motion.div>
       </NodeCard>
     </NodeContentWrapper>
   );
 });
+
+const useContentOptionsForAlbumCard = ({
+  parentView,
+  variant,
+}: {
+  parentView: AlbumCardParentView;
+  variant?: AlbumCardVariant;
+}) => {
+  const options: AlbumCardContentOptions = {
+    showArtistName: variant === "detailed" || parentView !== "albumsForArtist",
+    showAddRecommendationsButton: parentView === "flowchart",
+    showReleaseYear: variant === "detailed" || parentView === "albumsForArtist",
+    showZoomInButton:
+      parentView === "home" ||
+      parentView === "search" ||
+      parentView === "albumsForArtist" ||
+      variant === "compact",
+    showDetailedGenresAndDescriptors: variant === "detailed",
+  };
+
+  return options;
+};
+
+const AlbumCardDetailedGenresAndDescriptors = ({ album }: { album: Album }) => {
+  return (
+    <motion.div
+      className="flex flex-col items-center gap-2"
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      transition={{
+        opacity: {
+          delay: 0.3,
+        },
+      }}
+      style={{ overflow: "hidden" }}
+    >
+      <motion.div
+        className="grid w-full gap-2"
+        style={{
+          gridTemplateColumns: "1fr 1fr",
+        }}
+      >
+        {!!album["primary-genres"].length && (
+          <div className="flex flex-col gap-2 pr-2">
+            <span className="font-sans text-xs font-semibold text-gray-200">
+              Primary Genres
+            </span>
+            <div
+              style={{
+                borderColor: COLORS.tagsPrimaryGenre,
+                borderWidth: 1,
+                backgroundColor: rgbWithOpacity(COLORS.tagsPrimaryGenre, 0.1),
+              }}
+              className="rounded-lg p-2 text-xs"
+            >
+              {album["primary-genres"].map((genre, index) => (
+                <Fragment key={genre}>
+                  <span className="text-nowrap">{genre}</span>
+                  {index < album["primary-genres"].length - 1 ? (
+                    <span>, </span>
+                  ) : null}
+                </Fragment>
+              ))}
+            </div>
+          </div>
+        )}
+        {!!album["secondary-genres"].length && (
+          <div className="flex flex-col gap-2 pr-2">
+            <span className="font-sans text-xs font-semibold text-gray-200">
+              Secondary Genres
+            </span>
+            <div
+              style={{
+                borderColor: COLORS.tagsSecondaryGenre,
+                borderWidth: 1,
+                backgroundColor: rgbWithOpacity(COLORS.tagsSecondaryGenre, 0.1),
+              }}
+              className="rounded-lg p-2 text-xs"
+            >
+              {album["secondary-genres"].map((genre, index) => (
+                <Fragment key={genre}>
+                  <span className="text-nowrap">{genre}</span>
+                  {index < album["secondary-genres"].length - 1 ? (
+                    <span>, </span>
+                  ) : null}
+                </Fragment>
+              ))}
+            </div>
+          </div>
+        )}
+      </motion.div>
+      {!!album.descriptors.length && (
+        <div className="flex w-full flex-col gap-2">
+          <span className="font-sans text-xs font-semibold text-gray-200">
+            Descriptors
+          </span>
+          <div
+            style={{
+              borderColor: COLORS.tagsDescriptor,
+              borderWidth: 1,
+              backgroundColor: rgbWithOpacity(COLORS.tagsDescriptor, 0.1),
+            }}
+            className="rounded-lg p-2 text-xs"
+          >
+            {album.descriptors.join(", ")}
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+};

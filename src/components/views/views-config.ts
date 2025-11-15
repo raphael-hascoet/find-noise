@@ -8,6 +8,7 @@ import {
 import type { Position } from "../flowchart/flowchart-links";
 import {
   loadedNodeDimensionsAtom,
+  requestNodeDimensionsUpdateAtom,
   type NodeDimensions,
 } from "../nodes/view-node-dimensions";
 import { type ViewNodeDef } from "../nodes/view-nodes-manager";
@@ -100,7 +101,7 @@ export const nodePositioningStateAtom = atom((get): NodePositioningState => {
 
   for (const [id, nodeDef] of nodeDefs) {
     const nodeDimensions = dimensions.get(id);
-    if (!nodeDimensions) {
+    if (!nodeDimensions || nodeDimensions.updateRequested) {
       areAllNodeDefsDimensionsLoaded = false;
       break;
     }
@@ -169,6 +170,7 @@ const calculatedNodeDefsAtom = atom((get) => {
 type SetActiveViewParams = ViewConfig & {
   skipRezoom?: boolean;
   rezoomNodes?: string[];
+  requestDimensionsForNodes?: string[];
 };
 
 export const setActiveViewAtom = atom(
@@ -180,6 +182,11 @@ export const setActiveViewAtom = atom(
     }
     if (currentPositioningState.state === "ready") {
       set(transitioningNodesAtom, currentPositioningState.positionedNodes);
+      const posNodes = new Map(currentPositioningState.positionedNodes);
+      set(transitioningNodesAtom, posNodes);
+      if (config.requestDimensionsForNodes) {
+        set(requestNodeDimensionsUpdateAtom, config.requestDimensionsForNodes);
+      }
     }
     set(activeViewConfigAtom, config);
 

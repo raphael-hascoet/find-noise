@@ -38,7 +38,8 @@ export const flowchartView: Atom<ViewBuilder<"flowchart">> = atom({
         data: {
           artist: album["artist-mbid"],
           title: album.release,
-          variant: "flowchart",
+          parentView: "flowchart",
+          variant: "detailed",
         },
       },
     };
@@ -157,7 +158,18 @@ export const flowchartView: Atom<ViewBuilder<"flowchart">> = atom({
       if (nodeDef.children.length % 2 !== 0) {
         const idx = Math.floor((nodeDef.children.length + 1) / 2 - 1);
 
-        centeredPosition = positionMap.get(nodeDef.children[idx].id)?.x ?? 0;
+        const centerNodePos = positionMap.get(nodeDef.children[idx].id)?.x ?? 0;
+
+        const centerNodeW =
+          nodeDefsWithDimensions.get(nodeDef.children[idx].id)?.dimensions
+            .width ?? 0;
+
+        const parentNodeW =
+          nodeDefsWithDimensions.get(nodeDef.id)?.dimensions.width ?? 0;
+
+        const centerX = centerNodePos + centerNodeW / 2;
+
+        centeredPosition = centerX - parentNodeW / 2;
       } else {
         const idx1 = Math.floor(nodeDef.children.length / 2);
         const idx2 = idx1 + 1;
@@ -236,7 +248,7 @@ const flowchartViewActionsAtomGroup = {
             data: {
               artist: seed["artist-mbid"],
               title: seed.release,
-              variant: "flowchart",
+              parentView: "flowchart",
             },
           },
         } as ViewNodeDef);
@@ -249,7 +261,7 @@ const flowchartViewActionsAtomGroup = {
               data: {
                 artist: rec.album["artist-mbid"],
                 title: rec.album.release,
-                variant: "flowchart",
+                parentView: "flowchart",
                 recommendation: {
                   reason: rec.reason,
                   score: rec.score,
@@ -276,6 +288,35 @@ const flowchartViewActionsAtomGroup = {
       });
     },
   ),
+  focusNode: atom(null, (get, set, albumMbid: string) => {
+    const view = get(activeViewConfigReadOnlyAtom);
+
+    if (!view || view.key !== "flowchart") {
+      throw new Error("Active view is not flowchart");
+    }
+
+    const { data } = view as ViewConfig<"flowchart">;
+
+    const currentNodeTree = data.nodeTree;
+    if (!currentNodeTree) return;
+
+    const focusedNode = findNodeInTree(currentNodeTree, albumMbid);
+    if (!focusedNode) return;
+
+    const nodeContext = structuredClone(focusedNode.context);
+    if (nodeContext.type !== "album") return;
+
+    nodeContext.data.variant = "detailed";
+
+    focusedNode.context = nodeContext;
+
+    set(setActiveViewAtom, {
+      key: "flowchart",
+      data: { ...data, nodeTree: { ...currentNodeTree } },
+      skipRezoom: true,
+      requestDimensionsForNodes: [albumMbid],
+    });
+  }),
   removeChildrenFromNode: atom(
     null,
     (
@@ -311,9 +352,11 @@ export const useFlowchartViewActions = () => {
   const removeChildrenFromNode = useSetAtom(
     flowchartViewActionsAtomGroup.removeChildrenFromNode,
   );
+  const focusNode = useSetAtom(flowchartViewActionsAtomGroup.focusNode);
 
   return {
     addRecommendationsToNode,
     removeChildrenFromNode,
+    focusNode,
   };
 };

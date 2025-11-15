@@ -50,7 +50,7 @@ export const searchView: Atom<ViewBuilder<"search">> = atom(() => ({
               data: {
                 artist: album.artist,
                 title: album.release,
-                variant: "search",
+                parentView: "search",
               },
             },
           },
