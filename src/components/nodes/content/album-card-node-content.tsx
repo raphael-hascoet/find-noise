@@ -1,7 +1,14 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { GitGraph, ZoomIn } from "lucide-react";
-import { motion } from "motion/react";
-import { Fragment, memo } from "react";
+import { motion, type MotionProps } from "motion/react";
+import {
+  Fragment,
+  memo,
+  useEffect,
+  useRef,
+  useState,
+  type PropsWithChildren,
+} from "react";
 import { COLORS } from "../../../constants/colors";
 import {
   albumDataSelectorsAtom,
@@ -262,16 +269,16 @@ const useContentOptionsForAlbumCard = ({
 
 const AlbumCardDetailedGenresAndDescriptors = ({ album }: { album: Album }) => {
   return (
-    <motion.div
+    <SizeMeasuredMotionDiv
+      measurementWidth="24rem"
+      dependencies={[album]}
       className="flex flex-col items-center gap-2"
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: "auto" }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       transition={{
-        opacity: {
-          delay: 0.3,
-        },
+        opacity: { delay: 0.3 },
+        height: { delay: 0.2, duration: 0.3 },
       }}
-      style={{ overflow: "hidden" }}
     >
       <motion.div
         className="grid w-full gap-2"
@@ -345,6 +352,72 @@ const AlbumCardDetailedGenresAndDescriptors = ({ album }: { album: Album }) => {
           </div>
         </div>
       )}
+    </SizeMeasuredMotionDiv>
+  );
+};
+
+type SizeMeasuredMotionDivProps = {
+  measurementWidth?: string;
+  dependencies?: any[];
+  className?: string;
+  initial?: MotionProps["initial"];
+  animate?: MotionProps["animate"];
+  transition?: MotionProps["transition"];
+  style?: React.CSSProperties;
+} & PropsWithChildren;
+
+const SizeMeasuredMotionDiv = ({
+  children,
+  measurementWidth = "auto",
+  dependencies = [],
+  className,
+  initial,
+  animate,
+  transition,
+  style,
+}: SizeMeasuredMotionDivProps) => {
+  const [isMeasuring, setIsMeasuring] = useState(true);
+  const [measuredHeight, setMeasuredHeight] = useState(0);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (contentRef.current) {
+      const height = contentRef.current.scrollHeight;
+      setMeasuredHeight(height);
+      setIsMeasuring(false);
+    }
+  }, dependencies);
+
+  const initialValue =
+    typeof initial === "object" && initial !== null
+      ? { maxHeight: 0, ...initial }
+      : { maxHeight: 0 };
+
+  const animateValue =
+    typeof animate === "object" && animate !== null
+      ? { maxHeight: isMeasuring ? 0 : measuredHeight, ...animate }
+      : { maxHeight: isMeasuring ? 0 : measuredHeight };
+
+  return (
+    <motion.div
+      className={className}
+      initial={initialValue}
+      animate={animateValue}
+      transition={transition}
+      style={{ overflow: "hidden", ...style }}
+    >
+      <div
+        ref={contentRef}
+        style={{
+          position: isMeasuring ? "absolute" : "static",
+          visibility: isMeasuring ? "hidden" : "visible",
+          top: isMeasuring ? -9999 : "auto",
+          width: isMeasuring ? measurementWidth : "auto",
+        }}
+        className="flex flex-col items-center gap-2"
+      >
+        {children}
+      </div>
     </motion.div>
   );
 };
