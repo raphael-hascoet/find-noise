@@ -87,7 +87,7 @@ export const homeView: Atom<ViewBuilder<"home">> = atom(() => ({
       [
         "refresh-random-picks-button",
         {
-          x: randomPicksTitle.dimensions.width + 20,
+          x: randomPicksTitle.dimensions.width + 40,
           y: randomPicksTitle.dimensions.height / 2,
         },
       ],
