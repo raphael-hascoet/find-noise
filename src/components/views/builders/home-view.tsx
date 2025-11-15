@@ -80,15 +80,15 @@ export const homeView: Atom<ViewBuilder<"home">> = atom(() => ({
       [
         "random-picks",
         {
-          x: 0,
-          y: 0,
+          x: randomPicksTitle.dimensions.width / 2,
+          y: randomPicksTitle.dimensions.height / 2,
         },
       ],
       [
         "refresh-random-picks-button",
         {
           x: randomPicksTitle.dimensions.width + 20,
-          y: 0,
+          y: randomPicksTitle.dimensions.height / 2,
         },
       ],
       ...Array.from(albumPositions.entries()).map(

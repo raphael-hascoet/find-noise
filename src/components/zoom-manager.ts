@@ -350,10 +350,10 @@ const getPositionedNodesBounds = (
     (acc, node) => {
       const { width, height } = node.dimensions;
       const { x, y } = node.position;
-      acc.left = Math.min(acc.left, x);
-      acc.top = Math.min(acc.top, y);
-      acc.right = Math.max(acc.right, x + width);
-      acc.bottom = Math.max(acc.bottom, y + height);
+      acc.left = Math.min(acc.left, x - width / 2);
+      acc.top = Math.min(acc.top, y - height / 2);
+      acc.right = Math.max(acc.right, x + width / 2);
+      acc.bottom = Math.max(acc.bottom, y + height / 2);
       return acc;
     },
     { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity },

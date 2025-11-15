@@ -27,6 +27,8 @@ export const ViewNode = ({ node, propagateEvent }: ViewNodeProps) => {
       key={node.nodeDef.id}
       left={node.position.x}
       top={node.position.y}
+      width={node.dimensions.width}
+      height={node.dimensions.height}
       nodeId={node.nodeDef.id}
       propagateEvent={propagateEvent}
     >
@@ -38,11 +40,15 @@ export const ViewNode = ({ node, propagateEvent }: ViewNodeProps) => {
 function NodeMotion({
   left,
   top,
+  width,
+  height,
   children,
   propagateEvent,
 }: {
   left: number;
   top: number;
+  width: number;
+  height: number;
   children: React.ReactNode;
   nodeId: string;
   propagateEvent: PropagateEvent;
@@ -83,11 +89,11 @@ function NodeMotion({
       }}
       style={{
         position: "absolute",
-        left,
-        top,
+        left: left - width / 2,
+        top: top - height / 2,
         x: x,
         y: y,
-        transformOrigin: "top left",
+        transformOrigin: "center",
         pointerEvents: "all",
         cursor: "default",
       }}

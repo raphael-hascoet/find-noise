@@ -70,8 +70,10 @@ export const searchView: Atom<ViewBuilder<"search">> = atom(() => ({
 
     let nextY = 0;
 
-    // Results title
-    const resultsTitlePosition = { x: 0, y: 0 };
+    const resultsTitlePosition = { 
+      x: searchResultsTitle.dimensions.width / 2,
+      y: searchResultsTitle.dimensions.height / 2
+    };
     nextY += searchResultsTitle.dimensions.height + Y_GAP;
 
     // Album results in grid

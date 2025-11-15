@@ -31,12 +31,12 @@ export const buildGridPositions = ({
 
   nodes.forEach(({ id, dimensions }, index) => {
     positionMap.set(id, {
-      x: nextX,
-      y: nextY,
+      x: nextX + dimensions.width / 2,
+      y: nextY + dimensions.height / 2,
     });
     if (typeof maxPerRow === "number" && (index + 1) % maxPerRow === 0) {
       nextY += maxHeightOnRow + yGap;
-      nextX = 0;
+      nextX = baseX;
       maxHeightOnRow = dimensions.height;
     } else {
       nextX += dimensions.width + xGap;
