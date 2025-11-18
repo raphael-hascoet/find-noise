@@ -88,7 +88,6 @@ export const flowchartView: Atom<ViewBuilder<"flowchart">> = atom({
         return { widthRequired: extremityWidthRequired };
       }
 
-
       let widthRequired = 0;
       node.nodeDef.children.forEach((child) => {
         const childNode = nodeDefsWithDimensions.get(child.id);
@@ -127,7 +126,8 @@ export const flowchartView: Atom<ViewBuilder<"flowchart">> = atom({
         return;
       }
 
-      const parentHeight = nodeDefsWithDimensions.get(nodeDef.id)?.dimensions.height ?? 0;
+      const parentHeight =
+        nodeDefsWithDimensions.get(nodeDef.id)?.dimensions.height ?? 0;
       const childrenY = originPos.y + parentHeight / 2 + MARGIN_Y_NODES;
 
       const totalChildrenWidth =
@@ -144,6 +144,7 @@ export const flowchartView: Atom<ViewBuilder<"flowchart">> = atom({
 
         const childNode = nodeDefsWithDimensions.get(child.id);
         const childHeight = childNode?.dimensions.height ?? 0;
+
         const childOriginPos = {
           x: nextX + childWidthRequired / 2,
           y: childrenY + childHeight / 2,
@@ -179,13 +180,15 @@ export const flowchartView: Atom<ViewBuilder<"flowchart">> = atom({
       });
     };
 
-    handlePositionsForNodes({ 
-      nodeDef: albumNode.nodeDef, 
-      originPos: { 
-        x: albumNode.dimensions.width / 2, 
-        y: albumNode.dimensions.height / 2 
-      } 
+    handlePositionsForNodes({
+      nodeDef: albumNode.nodeDef,
+      originPos: {
+        x: albumNode.dimensions.width / 2,
+        y: albumNode.dimensions.height / 2,
+      },
     });
+
+    console.log("new position map:", positionMap);
 
     return positionMap;
   },
@@ -275,6 +278,7 @@ const flowchartViewActionsAtomGroup = {
         key: "flowchart",
         data: { ...data, nodeTree: updated },
         rezoomNodes: nodesInNewFocusedTree ?? undefined,
+        requestDimensionsForNodes: [`${albumMbid}-compact`],
       });
     },
   ),
@@ -304,7 +308,6 @@ const flowchartViewActionsAtomGroup = {
       key: "flowchart",
       data: { ...data, nodeTree: { ...currentNodeTree } },
       skipRezoom: true,
-      requestDimensionsForNodes: [albumMbid],
     });
   }),
   removeChildrenFromNode: atom(

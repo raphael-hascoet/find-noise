@@ -1,6 +1,7 @@
 import type { Atom } from "jotai";
 import { atom } from "jotai";
 import { atomFamily } from "jotai/utils";
+import { frame } from "motion";
 import {
   albumDataSelectorsAtom,
   type AlbumSelectors,
@@ -100,7 +101,13 @@ export const nodePositioningStateAtom = atom((get): NodePositioningState => {
   const nodeDefsWithDimensions = new Map<string, NodeDefWithDimensions>();
 
   for (const [id, nodeDef] of nodeDefs) {
-    const nodeDimensions = dimensions.get(id);
+    let dimensionKey = id;
+    if (nodeDef.context?.type === "album") {
+      const variant = nodeDef.context.data?.variant || "compact";
+      dimensionKey = `${id}-${variant}`;
+    }
+
+    const nodeDimensions = dimensions.get(dimensionKey);
     if (!nodeDimensions || nodeDimensions.updateRequested) {
       areAllNodeDefsDimensionsLoaded = false;
       break;
@@ -176,23 +183,27 @@ type SetActiveViewParams = ViewConfig & {
 export const setActiveViewAtom = atom(
   null,
   (get, set, config: SetActiveViewParams) => {
-    const currentPositioningState = get(nodePositioningStateAtom);
-    if (currentPositioningState.state === "in-progress") {
-      console.warn("New active view while positioning is in progress");
-    }
-    if (currentPositioningState.state === "ready") {
-      set(transitioningNodesAtom, currentPositioningState.positionedNodes);
-      const posNodes = new Map(currentPositioningState.positionedNodes);
-      set(transitioningNodesAtom, posNodes);
-      if (config.requestDimensionsForNodes) {
-        set(requestNodeDimensionsUpdateAtom, config.requestDimensionsForNodes);
+    frame.render(() => {
+      const currentPositioningState = get(nodePositioningStateAtom);
+      if (currentPositioningState.state === "in-progress") {
+        console.warn("New active view while positioning is in progress");
       }
-    }
-    set(activeViewConfigAtom, config);
+      if (currentPositioningState.state === "ready") {
+        const posNodes = new Map(currentPositioningState.positionedNodes);
+        set(transitioningNodesAtom, posNodes);
+        if (config.requestDimensionsForNodes) {
+          set(
+            requestNodeDimensionsUpdateAtom,
+            config.requestDimensionsForNodes,
+          );
+        }
+      }
+      set(activeViewConfigAtom, config);
 
-    set(updateZoomStatusOnViewChange, {
-      status: config.skipRezoom ? "resizing-pending" : "rezooming-pending",
-      rezoomNodes: config.rezoomNodes || null,
+      set(updateZoomStatusOnViewChange, {
+        status: config.skipRezoom ? "resizing-pending" : "rezooming-pending",
+        rezoomNodes: config.rezoomNodes || null,
+      });
     });
   },
 );
