@@ -1,7 +1,7 @@
 import { useAtomValue } from "jotai";
 import { animate, frame } from "motion";
-import { motion, useMotionValue } from "motion/react";
-import { useLayoutEffect, useRef } from "react";
+import { motion, useMotionValue, useTransform } from "motion/react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import {
   useD3ZoomPropagationProps,
   type PropagateEvent,
@@ -27,6 +27,8 @@ export const ViewNode = ({ node, propagateEvent }: ViewNodeProps) => {
       key={node.nodeDef.id}
       left={node.position.x}
       top={node.position.y}
+      width={node.dimensions.width}
+      height={node.dimensions.height}
       nodeId={node.nodeDef.id}
       propagateEvent={propagateEvent}
     >
@@ -39,10 +41,14 @@ function NodeMotion({
   left,
   top,
   children,
+  width,
+  height,
   propagateEvent,
 }: {
   left: number;
   top: number;
+  width: number;
+  height: number;
   children: React.ReactNode;
   nodeId: string;
   propagateEvent: PropagateEvent;
@@ -51,7 +57,22 @@ function NodeMotion({
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-  const prev = useRef<{ left: number; top: number }>({ left, top });
+
+  const heightMotion = useMotionValue(height);
+  const widthMotion = useMotionValue(width);
+
+  const anchoredTop = top - height / 2;
+
+  const transform = useTransform(
+    [x, y],
+    ([xVal, yVal]) => `translateX(-50%) translate(${xVal}px, ${yVal}px)`,
+  );
+
+  const prev = useRef<{ left: number; top: number; height: number }>({
+    left,
+    top: anchoredTop,
+    height,
+  });
 
   const propagationProps = useD3ZoomPropagationProps({
     ref: nodeRef,
@@ -59,18 +80,33 @@ function NodeMotion({
   });
 
   useLayoutEffect(() => {
-    if (left !== prev.current.left || top !== prev.current.top) {
+    if (left !== prev.current.left || anchoredTop !== prev.current.top) {
       const dx = prev.current.left - left + x.get();
-      const dy = prev.current.top - top + y.get();
+      const dy = prev.current.top - anchoredTop + y.get();
       x.set(dx);
       y.set(dy);
       frame.render(() => {
         animate(x, 0, { duration: 0.6, ease: [0.22, 1, 0.36, 1] });
         animate(y, 0, { duration: 0.6, ease: [0.22, 1, 0.36, 1] });
       });
-      prev.current = { left, top };
+      prev.current = { left, top: anchoredTop, height };
     }
-  }, [left, top, x, y]);
+  }, [left, anchoredTop, x, y, height]);
+
+  useEffect(() => {
+    frame.render(() => {
+      animate(heightMotion, height, {
+        ease: [0.22, 1, 0.36, 1],
+        duration: 0.6,
+      });
+    });
+  }, [height, heightMotion]);
+
+  useEffect(() => {
+    frame.render(() => {
+      animate(widthMotion, width, { ease: [0.22, 1, 0.36, 1], duration: 0.6 });
+    });
+  }, [width, widthMotion]);
 
   return (
     <motion.div
@@ -83,11 +119,12 @@ function NodeMotion({
       }}
       style={{
         position: "absolute",
-        left,
-        top,
-        x: x,
-        y: y,
-        transformOrigin: "top left",
+        left: left,
+        top: anchoredTop,
+        width: widthMotion,
+        height: heightMotion,
+        transform,
+        transformOrigin: "center",
         pointerEvents: "all",
         cursor: "default",
       }}

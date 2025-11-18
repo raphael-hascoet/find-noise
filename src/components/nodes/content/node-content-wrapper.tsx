@@ -1,12 +1,13 @@
+import clsx from "clsx";
 import { useSetAtom } from "jotai";
 import { frame } from "motion";
-import { useEffect, useMemo, useRef, type PropsWithChildren } from "react";
-import { throttle } from "../../../utils/debounce";
+import { useLayoutEffect, useRef, type PropsWithChildren } from "react";
 import { registerNodeDimensionsAtom } from "../view-node-dimensions";
 
 export type NodeContentWrapperPropsBase = {
   nodeId: string;
   positioned: boolean;
+  variant?: string;
 };
 
 type NodeContentWrapperProps = NodeContentWrapperPropsBase & PropsWithChildren;
@@ -15,62 +16,35 @@ export const NodeContentWrapper = ({
   nodeId,
   children,
   positioned,
+  variant,
 }: NodeContentWrapperProps) => {
   const ref = useRef<HTMLDivElement>(null);
-
   const registerNodeDimensions = useSetAtom(registerNodeDimensionsAtom);
 
-  const throttledUpdateNodeDimensions = useMemo(() => {
-    return throttle(
-      (dim: { width: number; height: number }) =>
-        frame.render(() =>
-          registerNodeDimensions({
-            id: nodeId,
-            width: dim.width,
-            height: dim.height,
-            updateRequested: false,
-            fromShell: !positioned,
-          }),
-        ),
-      25,
-    );
-  }, [registerNodeDimensions, nodeId]);
-
-  useEffect(() => {
-    if (!ref.current) return;
+  useLayoutEffect(() => {
+    if (positioned || !ref.current) return;
 
     const el = ref.current;
+    const width = el.offsetWidth;
+    const height = el.offsetHeight;
 
-    const ro = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-
-      let width = entry.contentRect.width;
-      let height = entry.contentRect.height;
-
-      const borderSizes = Array.isArray(entry.borderBoxSize)
-        ? entry.borderBoxSize[0]
-        : entry.borderBoxSize;
-
-      if (borderSizes) {
-        width = borderSizes.inlineSize ?? width;
-        height = borderSizes.blockSize ?? height;
-      }
-
-      console.log({ nodeId, width, height });
-
-      throttledUpdateNodeDimensions({ width, height });
-    });
-
-    ro.observe(el);
-
-    return () => {
-      ro.disconnect();
-    };
-  }, [throttledUpdateNodeDimensions]);
+    frame.render(() =>
+      registerNodeDimensions({
+        id: nodeId,
+        width: width,
+        height: height,
+        updateRequested: false,
+        fromShell: true,
+        variant,
+      }),
+    );
+  }, [registerNodeDimensions, nodeId, variant, positioned]);
 
   return (
-    <div ref={ref} className="h-fit w-fit">
+    <div
+      ref={ref}
+      className={`${clsx({ "max-h-fit": !positioned, "max-w-fit": !positioned, "flex-1": !positioned, absolute: positioned, "inset-0": positioned })}`}
+    >
       {children}
     </div>
   );

@@ -60,10 +60,14 @@ export const albumsForArtistView: Atom<ViewBuilder<"albumsForArtist">> = atom(
       let nextY = 0;
 
       let positionMap = new Map<string, Position>();
-      positionMap.set(artistId, { x: 0, y: 0 });
-
-      nextY +=
-        (nodeDefsWithDimensions.get(artistId)?.dimensions.height || 0) + Y_GAP;
+      const artistDimensions = nodeDefsWithDimensions.get(artistId)?.dimensions;
+      if (artistDimensions) {
+        positionMap.set(artistId, { 
+          x: artistDimensions.width / 2,
+          y: artistDimensions.height / 2
+        });
+        nextY += artistDimensions.height + Y_GAP;
+      }
 
       const albumsDimensions = albums
         .sort((a, b) => a["release-date"].localeCompare(b["release-date"]))

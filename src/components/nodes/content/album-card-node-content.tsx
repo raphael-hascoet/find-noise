@@ -1,6 +1,6 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { GitGraph, ZoomIn } from "lucide-react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { Fragment, memo } from "react";
 import { COLORS } from "../../../constants/colors";
 import {
@@ -74,10 +74,10 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
   } = useContentOptionsForAlbumCard({ parentView, variant });
 
   return (
-    <NodeContentWrapper {...graphNodeProps}>
-      <NodeCard>
+    <NodeContentWrapper {...graphNodeProps} variant={variant}>
+      <NodeCard positioned={graphNodeProps.positioned}>
         <motion.div
-          className="flex min-h-20 flex-col items-center gap-4"
+          className="flex min-h-20 flex-1 flex-col items-center gap-4"
           animate={variant}
           initial={false}
           variants={{
@@ -91,7 +91,6 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
             },
           }}
         >
-          {/* {graphNodeProps.nodeId} */}
           <div className="flex w-full min-w-0 flex-col items-center gap-2">
             <motion.div
               className="flex overflow-hidden"
@@ -148,6 +147,9 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                         data: {
                           artistId: album?.["artist-mbid"],
                         },
+                        requestDimensionsForNodes: [
+                          `${graphNodeProps.nodeId}-compact`,
+                        ],
                       });
                     }}
                   >
@@ -182,9 +184,27 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
               </motion.div>
             </div>
           </div>
-          {showDetailedGenresAndDescriptors && (
-            <AlbumCardDetailedGenresAndDescriptors album={album} />
-          )}
+          <AnimatePresence>
+            {showDetailedGenresAndDescriptors && (
+              <motion.div
+                className="flex flex-col items-center gap-2"
+                initial="hidden"
+                animate="show"
+                exit="hide"
+                variants={{
+                  hidden: { opacity: 0 },
+                  show: {
+                    opacity: 1,
+                    transition: { delay: 0.3, duration: 0.3 },
+                  },
+                  hide: { opacity: 0, transition: { duration: 0.1 } },
+                }}
+                style={{ overflow: "hidden" }}
+              >
+                <AlbumCardDetailedGenresAndDescriptors album={album} />
+              </motion.div>
+            )}
+          </AnimatePresence>
           {showAddRecommendationsButton && (
             <button
               onClick={(e) => {
@@ -225,6 +245,9 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                   data: {
                     albumMbid: graphNodeProps.nodeId,
                   },
+                  requestDimensionsForNodes: [
+                    `${graphNodeProps.nodeId}-compact`,
+                  ],
                 });
               }}
               className="pointer-events-auto cursor-pointer rounded-full bg-gray-700/60 p-1.5 text-gray-400 shadow-sm/25 shadow-gray-950"
@@ -262,17 +285,7 @@ const useContentOptionsForAlbumCard = ({
 
 const AlbumCardDetailedGenresAndDescriptors = ({ album }: { album: Album }) => {
   return (
-    <motion.div
-      className="flex flex-col items-center gap-2"
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: "auto" }}
-      transition={{
-        opacity: {
-          delay: 0.3,
-        },
-      }}
-      style={{ overflow: "hidden" }}
-    >
+    <>
       <motion.div
         className="grid w-full gap-2"
         style={{
@@ -345,6 +358,6 @@ const AlbumCardDetailedGenresAndDescriptors = ({ album }: { album: Album }) => {
           </div>
         </div>
       )}
-    </motion.div>
+    </>
   );
 };

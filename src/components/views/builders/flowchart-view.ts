@@ -64,12 +64,14 @@ export const flowchartView: Atom<ViewBuilder<"flowchart">> = atom({
     }
 
     if (!albumNode.nodeDef.children?.length) {
-      positionMap.set(albumMbid, { x: 0, y: 0 });
+      positionMap.set(albumMbid, {
+        x: albumNode.dimensions.width / 2,
+        y: albumNode.dimensions.height / 2,
+      });
       return positionMap;
     }
 
     const widthRequiredPerNode = new Map<string, number>();
-    const heightPerDepth: number[] = [];
 
     const handleChildrenWidthReqs = ({
       node,
@@ -85,11 +87,6 @@ export const flowchartView: Atom<ViewBuilder<"flowchart">> = atom({
         widthRequiredPerNode.set(node.nodeDef.id, extremityWidthRequired);
         return { widthRequired: extremityWidthRequired };
       }
-
-      heightPerDepth[depth] = Math.max(
-        heightPerDepth[depth] ?? 0,
-        node.dimensions?.height ?? 0,
-      );
 
       let widthRequired = 0;
       node.nodeDef.children.forEach((child) => {
@@ -115,11 +112,6 @@ export const flowchartView: Atom<ViewBuilder<"flowchart">> = atom({
       node: albumNode,
     });
 
-    let yForDepth: number[] = [0];
-
-    heightPerDepth.forEach((heightForDepth, depth) => {
-      yForDepth[depth + 1] = yForDepth[depth] + heightForDepth + MARGIN_Y_NODES;
-    });
     const handlePositionsForNodes = ({
       nodeDef,
       originPos = { x: 0, y: 0 },
@@ -134,14 +126,28 @@ export const flowchartView: Atom<ViewBuilder<"flowchart">> = atom({
         return;
       }
 
-      const childrenY = yForDepth[depth + 1] ?? 0;
+      const parentHeight =
+        nodeDefsWithDimensions.get(nodeDef.id)?.dimensions.height ?? 0;
+      const childrenY = originPos.y + parentHeight / 2 + MARGIN_Y_NODES;
 
-      let nextX = originPos.x;
+      const totalChildrenWidth =
+        nodeDef.children.reduce(
+          (sum, child) => sum + (widthRequiredPerNode.get(child.id) ?? 0),
+          0,
+        ) +
+        MARGIN_X_NODES * (nodeDef.children.length - 1);
+
+      let nextX = originPos.x - totalChildrenWidth / 2;
 
       nodeDef.children?.forEach((child) => {
+        const childWidthRequired = widthRequiredPerNode.get(child.id) ?? 0;
+
+        const childNode = nodeDefsWithDimensions.get(child.id);
+        const childHeight = childNode?.dimensions.height ?? 0;
+
         const childOriginPos = {
-          x: nextX,
-          y: childrenY,
+          x: nextX + childWidthRequired / 2,
+          y: childrenY + childHeight / 2,
         };
 
         handlePositionsForNodes({
@@ -150,7 +156,7 @@ export const flowchartView: Atom<ViewBuilder<"flowchart">> = atom({
           depth: depth + 1,
         });
 
-        nextX += (widthRequiredPerNode.get(child.id) ?? 0) + MARGIN_X_NODES;
+        nextX += childWidthRequired + MARGIN_X_NODES;
       });
 
       let centeredPosition: number;
@@ -158,44 +164,31 @@ export const flowchartView: Atom<ViewBuilder<"flowchart">> = atom({
       if (nodeDef.children.length % 2 !== 0) {
         const idx = Math.floor((nodeDef.children.length + 1) / 2 - 1);
 
-        const centerNodePos = positionMap.get(nodeDef.children[idx].id)?.x ?? 0;
-
-        const centerNodeW =
-          nodeDefsWithDimensions.get(nodeDef.children[idx].id)?.dimensions
-            .width ?? 0;
-
-        const parentNodeW =
-          nodeDefsWithDimensions.get(nodeDef.id)?.dimensions.width ?? 0;
-
-        const centerX = centerNodePos + centerNodeW / 2;
-
-        centeredPosition = centerX - parentNodeW / 2;
+        centeredPosition = positionMap.get(nodeDef.children[idx].id)?.x ?? 0;
       } else {
-        const idx1 = Math.floor(nodeDef.children.length / 2);
-        const idx2 = idx1 + 1;
-
-        const width1 =
-          nodeDefsWithDimensions.get(nodeDef.children[idx1].id)?.dimensions
-            .width ?? 0;
-        const width2 =
-          nodeDefsWithDimensions.get(nodeDef.children[idx2].id)?.dimensions
-            .width ?? 0;
+        const idx1 = Math.floor(nodeDef.children.length / 2) - 1;
+        const idx2 = Math.floor(nodeDef.children.length / 2);
 
         const pos1 = positionMap.get(nodeDef.children[idx1].id)?.x ?? 0;
         const pos2 = positionMap.get(nodeDef.children[idx2].id)?.x ?? 0;
 
-        const center1 = pos1 + width1 / 2;
-        const center2 = pos2 + width2 / 2;
-
-        centeredPosition = (center1 + center2) / 2;
+        centeredPosition = (pos1 + pos2) / 2;
       }
       positionMap.set(nodeDef.id, {
         x: centeredPosition,
-        y: yForDepth[depth] ?? 0,
+        y: originPos.y,
       });
     };
 
-    handlePositionsForNodes({ nodeDef: albumNode.nodeDef });
+    handlePositionsForNodes({
+      nodeDef: albumNode.nodeDef,
+      originPos: {
+        x: albumNode.dimensions.width / 2,
+        y: albumNode.dimensions.height / 2,
+      },
+    });
+
+    console.log("new position map:", positionMap);
 
     return positionMap;
   },
@@ -285,6 +278,7 @@ const flowchartViewActionsAtomGroup = {
         key: "flowchart",
         data: { ...data, nodeTree: updated },
         rezoomNodes: nodesInNewFocusedTree ?? undefined,
+        requestDimensionsForNodes: [`${albumMbid}-compact`],
       });
     },
   ),
@@ -314,7 +308,6 @@ const flowchartViewActionsAtomGroup = {
       key: "flowchart",
       data: { ...data, nodeTree: { ...currentNodeTree } },
       skipRezoom: true,
-      requestDimensionsForNodes: [albumMbid],
     });
   }),
   removeChildrenFromNode: atom(

@@ -138,11 +138,50 @@ const ViewsRendererContent = function ({
           onExitComplete={() => setTransitionNodes(new Map())}
         >
           {positioningState.state === "in-progress" &&
-            Array.from(positioningState.targetNodeDefs).map(([id, nodeDef]) => (
-              <div key={`shell-${id}`} className="opacity-0">
-                <ViewNodeContent hasPosition={false} nodeDef={nodeDef} />
-              </div>
-            ))}
+            Array.from(positioningState.targetNodeDefs).map(([id, nodeDef]) => {
+              // For album nodes, render both variants to pre-calculate dimensions
+              if (nodeDef.context?.type === "album") {
+                return [
+                  <div key={`shell-${id}-compact`} className="opacity-0">
+                    <ViewNodeContent
+                      hasPosition={false}
+                      nodeDef={{
+                        ...nodeDef,
+                        context: {
+                          ...nodeDef.context,
+                          data: {
+                            ...nodeDef.context.data,
+                            variant: "compact",
+                          },
+                        },
+                      }}
+                    />
+                  </div>,
+                  <div key={`shell-${id}-detailed`} className="opacity-0">
+                    <ViewNodeContent
+                      hasPosition={false}
+                      nodeDef={{
+                        ...nodeDef,
+                        context: {
+                          ...nodeDef.context,
+                          data: {
+                            ...nodeDef.context.data,
+                            variant: "detailed",
+                          },
+                        },
+                      }}
+                    />
+                  </div>,
+                ];
+              }
+
+              // For non-album nodes, use original behavior
+              return (
+                <div key={`shell-${id}`} className="opacity-0">
+                  <ViewNodeContent hasPosition={false} nodeDef={nodeDef} />
+                </div>
+              );
+            })}
           {visiblePositionedNodes &&
             Array.from(visiblePositionedNodes.entries()).map(
               ([nodeId, node]) => {

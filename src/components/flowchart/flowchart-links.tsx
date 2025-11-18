@@ -254,35 +254,29 @@ const calculateLinkEndpoints = ({
     (t1, t2) => t1.position.x - t2.position.x,
   );
 
-  const sourceWidth = source.dimensions.width;
   const sourceHeight = source.dimensions.height;
-  const sourceHalfW = sourceWidth / 2;
 
   const gap = 40;
 
-  const sourceBottomY = source.position.y + sourceHeight;
+  const sourceBottomY = source.position.y + sourceHeight / 2;
 
   const rootPos = {
-    x: source.position.x + sourceHalfW,
+    x: source.position.x,
     y: sourceBottomY + gap,
   };
 
-  const targetMinY = Math.min(...targets.map((t) => t.position.y));
+  const targetMinY = Math.min(...targets.map((t) => t.position.y - t.dimensions.height / 2));
 
   const distanceBetweenSourceAndTarget = targetMinY - sourceBottomY;
 
   const connectionPos = {
-    x: source.position.x + sourceHalfW,
+    x: source.position.x,
     y: targetMinY - distanceBetweenSourceAndTarget * (5 / 8),
   };
 
-  const leftConnectionLineExtremityX =
-    leftToRightTargets[0].position.x +
-    leftToRightTargets[0].dimensions.width / 2;
+  const leftConnectionLineExtremityX = leftToRightTargets[0].position.x;
 
-  const rightConnectionLineExtremityX =
-    leftToRightTargets[leftToRightTargets.length - 1].position.x +
-    leftToRightTargets[leftToRightTargets.length - 1].dimensions.width / 2;
+  const rightConnectionLineExtremityX = leftToRightTargets[leftToRightTargets.length - 1].position.x;
 
   const sourceToConnectionLine: LinkLineDef = {
     start: rootPos,
@@ -321,11 +315,11 @@ const calculateLinkEndpoints = ({
       return {
         start: {
           y: connectionPos.y,
-          x: target.position.x + target.dimensions.width / 2,
+          x: target.position.x,
         },
         end: {
-          x: target.position.x + target.dimensions.width / 2,
-          y: target.position.y - gap,
+          x: target.position.x,
+          y: target.position.y - target.dimensions.height / 2 - gap,
         },
         isArrow: true,
         segmentId: `target-${source.nodeDef.id}-${target.nodeDef.id}`,
