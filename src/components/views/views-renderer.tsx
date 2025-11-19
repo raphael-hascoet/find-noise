@@ -69,8 +69,6 @@ const ViewsRendererContent = function ({
     svgRef,
   });
 
-  console.log({ positioningState });
-
   const visiblePositionedNodes =
     positioningState.state === "ready"
       ? positioningState.positionedNodes

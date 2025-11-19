@@ -45,9 +45,6 @@ export const registerNodeDimensionsAtom = atom(
   (get, set, node: NodeDimensions) => {
     let hasUpdated = false;
 
-    console.log("Register dimensions for node", node.id, { node }, Date.now());
-
-    // Use variant-aware key for storage
     const storageKey = node.variant ? `${node.id}_${node.variant}` : node.id;
 
     const currentLoadedNodes = get(loadedNodeDimensionsAtom);
@@ -69,12 +66,6 @@ export const registerNodeDimensionsAtom = atom(
     }
 
     if (!currentLoadedNode || currentLoadedNode?.updateRequested) {
-      console.log("dimension update accepted", node.id);
-      // updatedLoadedNodes = new Map(get(loadedNodeDimensionsAtom)).set(
-      //   storageKey,
-      //   node,
-      // );
-      // set(loadedNodeDimensionsAtom, updatedLoadedNodes);
       set(batchDimensionUpdates, { key: storageKey, value: node });
       hasUpdated = true;
     }
