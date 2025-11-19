@@ -1,6 +1,6 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ulid } from "ulid";
 import { debounce } from "../../utils/debounce";
 import {
@@ -38,10 +38,16 @@ const SearchBar = () => {
                 }
               : { key: "home", data: { seed: ulid() } },
           ),
-        200,
+        300,
       ),
     [setView],
   );
+
+  useEffect(() => {
+    if (inputValue.length && view?.key !== "search") {
+      setInputValue("");
+    }
+  }, [view?.key]);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const query = event.target.value;

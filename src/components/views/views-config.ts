@@ -111,6 +111,7 @@ export const nodePositioningStateAtom = atom((get): NodePositioningState => {
 
     const nodeDimensions = dimensions.get(dimensionKey);
     if (!nodeDimensions || nodeDimensions.updateRequested) {
+      console.log("not loaded", { nodeDimensions, nodeDefs });
       areAllNodeDefsDimensionsLoaded = false;
       break;
     }

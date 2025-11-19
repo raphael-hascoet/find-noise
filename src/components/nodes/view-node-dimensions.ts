@@ -11,16 +11,46 @@ export type NodeDimensions = {
 };
 export const loadedNodeDimensionsAtom = atom(new Map<string, NodeDimensions>());
 
+const dimensionsUpdateBatched = atom<{ key: string; value: NodeDimensions }[]>(
+  [],
+);
+
+const timeoutId = atom<number | null>();
+
+const batchDimensionUpdates = atom(
+  null,
+  (get, set, update: { key: string; value: NodeDimensions }) => {
+    set(dimensionsUpdateBatched, get(dimensionsUpdateBatched).concat(update));
+
+    if (!get(timeoutId)) {
+      set(
+        timeoutId,
+        setTimeout(() => set(sendBatchedUpdates), 10),
+      );
+    }
+  },
+);
+
+const sendBatchedUpdates = atom(null, (get, set) => {
+  const updatedLoadedNodes = new Map(get(loadedNodeDimensionsAtom));
+  const updates = get(dimensionsUpdateBatched);
+  updates.forEach((update) => updatedLoadedNodes.set(update.key, update.value));
+  set(loadedNodeDimensionsAtom, updatedLoadedNodes);
+  set(dimensionsUpdateBatched, []);
+  set(timeoutId, null);
+});
+
 export const registerNodeDimensionsAtom = atom(
   null,
   (get, set, node: NodeDimensions) => {
     let hasUpdated = false;
 
+    console.log("Register dimensions for node", node.id, { node }, Date.now());
+
     // Use variant-aware key for storage
     const storageKey = node.variant ? `${node.id}_${node.variant}` : node.id;
 
     const currentLoadedNodes = get(loadedNodeDimensionsAtom);
-    let updatedLoadedNodes = currentLoadedNodes;
     const currentLoadedNode = currentLoadedNodes.get(storageKey);
 
     if (
@@ -39,11 +69,13 @@ export const registerNodeDimensionsAtom = atom(
     }
 
     if (!currentLoadedNode || currentLoadedNode?.updateRequested) {
-      updatedLoadedNodes = new Map(get(loadedNodeDimensionsAtom)).set(
-        storageKey,
-        node,
-      );
-      set(loadedNodeDimensionsAtom, updatedLoadedNodes);
+      console.log("dimension update accepted", node.id);
+      // updatedLoadedNodes = new Map(get(loadedNodeDimensionsAtom)).set(
+      //   storageKey,
+      //   node,
+      // );
+      // set(loadedNodeDimensionsAtom, updatedLoadedNodes);
+      set(batchDimensionUpdates, { key: storageKey, value: node });
       hasUpdated = true;
     }
 
