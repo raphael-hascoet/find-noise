@@ -1,6 +1,8 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { ulid } from "ulid";
+import { debounce } from "../../utils/debounce";
 import {
   activeViewConfigReadOnlyAtom,
   setActiveViewAtom,
@@ -21,17 +23,31 @@ const SearchBar = () => {
 
   const setView = useSetAtom(setActiveViewAtom);
 
+  const [inputValue, setInputValue] = useState("");
+
+  const debouncedSearch = useMemo(
+    () =>
+      debounce(
+        ({ query }: { query: string }) =>
+          setView(
+            query.length > 0
+              ? {
+                  key: "search",
+                  data: { query },
+                  skipAlbumDimensionsUpdate: view?.key === "search",
+                }
+              : { key: "home", data: { seed: ulid() } },
+          ),
+        200,
+      ),
+    [setView],
+  );
+
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const query = event.target.value;
-    setView({
-      key: "search",
-      data: { query },
-      skipAlbumDimensionsUpdate: view?.key === "search",
-    });
+    setInputValue(query);
+    debouncedSearch({ query });
   };
-
-  const inputValue =
-    view?.key === "search" ? (view.data as { query: string }).query : "";
 
   return (
     <div className="pointer-events-auto relative flex items-center">
@@ -48,6 +64,7 @@ const SearchBar = () => {
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
+            setInputValue("");
             setView({ key: "home", data: { seed: ulid() } });
           }}
         >
