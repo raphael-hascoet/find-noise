@@ -202,6 +202,27 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
               </motion.div>
             )}
           </AnimatePresence>
+
+          {showZoomInButton && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (parentView === "flowchart") {
+                  focusNode(graphNodeProps.nodeId);
+                  return;
+                }
+                setActiveView({
+                  key: "flowchart",
+                  data: {
+                    albumMbid: graphNodeProps.nodeId,
+                  },
+                });
+              }}
+              className="pointer-events-auto cursor-pointer rounded-full bg-slate-700 p-1.5 text-gray-400 shadow-sm/25 shadow-gray-950 transition-colors hover:bg-slate-800"
+            >
+              <ZoomIn width={16} height={16} />
+            </button>
+          )}
           {showAddRecommendationsButton && (
             <button
               onClick={(e) => {
@@ -224,29 +245,9 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                   },
                 });
               }}
-              className="pointer-events-auto cursor-pointer rounded-full bg-gray-700/60 p-1.5 text-gray-400 shadow-sm/25 shadow-gray-950 hover:bg-gray-700"
+              className="pointer-events-auto cursor-pointer rounded-full bg-slate-700 p-1.5 text-gray-400 shadow-sm/25 shadow-gray-950 transition-colors hover:bg-slate-800"
             >
               <GitGraph width={16} height={16} />
-            </button>
-          )}
-          {showZoomInButton && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (parentView === "flowchart") {
-                  focusNode(graphNodeProps.nodeId);
-                  return;
-                }
-                setActiveView({
-                  key: "flowchart",
-                  data: {
-                    albumMbid: graphNodeProps.nodeId,
-                  },
-                });
-              }}
-              className="pointer-events-auto cursor-pointer rounded-full bg-gray-700/60 p-1.5 text-gray-400 shadow-sm/25 shadow-gray-950"
-            >
-              <ZoomIn width={16} height={16} />
             </button>
           )}
         </motion.div>
