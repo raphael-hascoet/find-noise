@@ -17,7 +17,7 @@ export const registerNodeDimensionsAtom = atom(
     let hasUpdated = false;
 
     // Use variant-aware key for storage
-    const storageKey = node.variant ? `${node.id}-${node.variant}` : node.id;
+    const storageKey = node.variant ? `${node.id}_${node.variant}` : node.id;
 
     const currentLoadedNodes = get(loadedNodeDimensionsAtom);
     let updatedLoadedNodes = currentLoadedNodes;
@@ -79,14 +79,5 @@ export const requestNodeDimensionsUpdateAtom = atom(
     }
 
     set(loadedNodeDimensionsAtom, updatedLoadedNodes);
-  },
-);
-
-// Helper function to get dimensions for a specific node and variant
-export const getNodeDimensionsAtom = atom(
-  (get) => (nodeId: string, variant?: string) => {
-    const loadedNodes = get(loadedNodeDimensionsAtom);
-    const storageKey = variant ? `${nodeId}-${variant}` : nodeId;
-    return loadedNodes.get(storageKey);
   },
 );

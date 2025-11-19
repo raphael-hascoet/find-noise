@@ -147,9 +147,6 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                         data: {
                           artistId: album?.["artist-mbid"],
                         },
-                        requestDimensionsForNodes: [
-                          `${graphNodeProps.nodeId}-compact`,
-                        ],
                       });
                     }}
                   >
@@ -245,9 +242,6 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                   data: {
                     albumMbid: graphNodeProps.nodeId,
                   },
-                  requestDimensionsForNodes: [
-                    `${graphNodeProps.nodeId}-compact`,
-                  ],
                 });
               }}
               className="pointer-events-auto cursor-pointer rounded-full bg-gray-700/60 p-1.5 text-gray-400 shadow-sm/25 shadow-gray-950"

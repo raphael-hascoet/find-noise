@@ -23,7 +23,11 @@ const SearchBar = () => {
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const query = event.target.value;
-    setView({ key: "search", data: { query } });
+    setView({
+      key: "search",
+      data: { query },
+      skipAlbumDimensionsUpdate: view?.key === "search",
+    });
   };
 
   const inputValue =

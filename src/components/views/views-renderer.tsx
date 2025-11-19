@@ -12,9 +12,9 @@ import { ViewNode, ViewNodeContent } from "../nodes/view-node";
 import { useZoomManager } from "../zoom-manager";
 import {
   calculatedLinksAtom,
+  clearTransitioningNodesAtom,
   nodePositioningStateAtom,
   setActiveViewAtom,
-  transitioningNodesAtom,
   type NodePositioningState,
 } from "./views-config";
 
@@ -53,7 +53,7 @@ const ViewsRendererContent = function ({
 
   const links = useAtomValue(calculatedLinksAtom);
 
-  const setTransitionNodes = useSetAtom(transitioningNodesAtom);
+  const clearTransitionNodes = useSetAtom(clearTransitioningNodesAtom);
 
   useEffect(() => {
     if (!svgRef.current) return;
@@ -133,16 +133,13 @@ const ViewsRendererContent = function ({
         }}
         ref={overlayRef}
       >
-        <AnimatePresence
-          mode="popLayout"
-          onExitComplete={() => setTransitionNodes(new Map())}
-        >
+        <AnimatePresence mode="popLayout" onExitComplete={clearTransitionNodes}>
           {positioningState.state === "in-progress" &&
             Array.from(positioningState.targetNodeDefs).map(([id, nodeDef]) => {
               // For album nodes, render both variants to pre-calculate dimensions
               if (nodeDef.context?.type === "album") {
                 return [
-                  <div key={`shell-${id}-compact`} className="opacity-0">
+                  <div key={`shell-${id}_compact`} className="opacity-0">
                     <ViewNodeContent
                       hasPosition={false}
                       nodeDef={{
@@ -157,7 +154,7 @@ const ViewsRendererContent = function ({
                       }}
                     />
                   </div>,
-                  <div key={`shell-${id}-detailed`} className="opacity-0">
+                  <div key={`shell-${id}_detailed`} className="opacity-0">
                     <ViewNodeContent
                       hasPosition={false}
                       nodeDef={{
