@@ -84,6 +84,7 @@ export type NodePositioningState =
       state: "in-progress";
       transitionNodes?: Map<string, PositionedNode>;
       targetNodeDefs: Map<string, ViewNodeDef>;
+      triggeredAt: string;
     }
   | {
       state: "ready";
@@ -97,6 +98,8 @@ export const nodePositioningStateAtom = atom((get): NodePositioningState => {
 
   const dimensions = get(loadedNodeDimensionsAtom);
 
+  console.log({ dimensions });
+
   let areAllNodeDefsDimensionsLoaded = true;
   const nodeDefsWithDimensions = new Map<string, NodeDefWithDimensions>();
 
@@ -104,11 +107,12 @@ export const nodePositioningStateAtom = atom((get): NodePositioningState => {
     let dimensionKey = id;
     if (nodeDef.context?.type === "album") {
       const variant = nodeDef.context.data?.variant || "compact";
-      dimensionKey = `${id}-${variant}`;
+      dimensionKey = `${id}_${variant}`;
     }
 
     const nodeDimensions = dimensions.get(dimensionKey);
     if (!nodeDimensions || nodeDimensions.updateRequested) {
+      console.log("not loaded", { nodeDimensions, nodeDefs });
       areAllNodeDefsDimensionsLoaded = false;
       break;
     }
@@ -122,6 +126,7 @@ export const nodePositioningStateAtom = atom((get): NodePositioningState => {
       state: "in-progress",
       transitionNodes,
       targetNodeDefs: nodeDefs,
+      triggeredAt: new Date().toISOString(),
     };
   }
 
@@ -171,13 +176,13 @@ const calculatedNodeDefsAtom = atom((get) => {
   return builder.buildNodes({
     data: viewConfig.data as any,
     selectors,
-  }) as Map<string, ViewNodeDef>;
+  });
 });
 
 type SetActiveViewParams = ViewConfig & {
   skipRezoom?: boolean;
   rezoomNodes?: string[];
-  requestDimensionsForNodes?: string[];
+  skipAlbumDimensionsUpdate?: boolean;
 };
 
 export const setActiveViewAtom = atom(
@@ -191,11 +196,17 @@ export const setActiveViewAtom = atom(
       if (currentPositioningState.state === "ready") {
         const posNodes = new Map(currentPositioningState.positionedNodes);
         set(transitioningNodesAtom, posNodes);
-        if (config.requestDimensionsForNodes) {
-          set(
-            requestNodeDimensionsUpdateAtom,
-            config.requestDimensionsForNodes,
-          );
+
+        if (!config.skipAlbumDimensionsUpdate) {
+          const dimensionUpdateRequests = Array.from(
+            currentPositioningState.positionedNodes.entries(),
+          )
+            .filter(([_, node]) => node.nodeDef.context.type === "album")
+            .map(([id]) => `${id}_compact`);
+
+          if (dimensionUpdateRequests.length) {
+            set(requestNodeDimensionsUpdateAtom, dimensionUpdateRequests);
+          }
         }
       }
       set(activeViewConfigAtom, config);
@@ -208,13 +219,37 @@ export const setActiveViewAtom = atom(
   },
 );
 
-export const transitioningNodesAtom = atom<Map<string, PositionedNode>>();
+export const transitioningNodesAtom = atom<Map<string, PositionedNode>>(
+  new Map(),
+);
 
 export const transitioningNodesFamily = atomFamily((id: string) => {
   return atom((get) => {
     const transitioningNodes = get(transitioningNodesAtom);
     return transitioningNodes?.get(id);
   });
+});
+
+export const clearTransitioningNodesAtom = atom(null, (get, set) => {
+  const loadedNodeDimensions = get(loadedNodeDimensionsAtom);
+
+  const positioningState = get(nodePositioningStateAtom);
+
+  if (positioningState.state === "ready") {
+    const positionedNodes = Array.from(positioningState.positionedNodes.keys());
+
+    const dimensionsToClear = Array.from(loadedNodeDimensions?.keys()).filter(
+      (id) => !positionedNodes.includes(id.split("_")[0]),
+    );
+
+    if (dimensionsToClear.length) {
+      const updatedDimensions = new Map(loadedNodeDimensions);
+      dimensionsToClear.forEach((id) => updatedDimensions.delete(id));
+      set(loadedNodeDimensionsAtom, updatedDimensions);
+    }
+  }
+
+  set(transitioningNodesAtom, new Map());
 });
 
 export const calculatedLinksAtom = atom((get) => {

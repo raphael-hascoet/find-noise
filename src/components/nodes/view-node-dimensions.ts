@@ -11,49 +11,53 @@ export type NodeDimensions = {
 };
 export const loadedNodeDimensionsAtom = atom(new Map<string, NodeDimensions>());
 
+const dimensionsUpdateBatched = atom<{ key: string; value: NodeDimensions }[]>(
+  [],
+);
+
+const timeoutId = atom<number | null>();
+
+const batchDimensionUpdates = atom(
+  null,
+  (get, set, update: { key: string; value: NodeDimensions }) => {
+    set(dimensionsUpdateBatched, get(dimensionsUpdateBatched).concat(update));
+
+    if (!get(timeoutId)) {
+      set(
+        timeoutId,
+        setTimeout(() => set(sendBatchedUpdates), 10),
+      );
+    }
+  },
+);
+
+const sendBatchedUpdates = atom(null, (get, set) => {
+  const updatedLoadedNodes = new Map(get(loadedNodeDimensionsAtom));
+  const updates = get(dimensionsUpdateBatched);
+  updates.forEach((update) => updatedLoadedNodes.set(update.key, update.value));
+  set(loadedNodeDimensionsAtom, updatedLoadedNodes);
+  set(dimensionsUpdateBatched, []);
+  set(timeoutId, null);
+});
+
 export const registerNodeDimensionsAtom = atom(
   null,
   (get, set, node: NodeDimensions) => {
-    let hasUpdated = false;
-
-    // Use variant-aware key for storage
-    const storageKey = node.variant ? `${node.id}-${node.variant}` : node.id;
+    const storageKey = node.variant ? `${node.id}_${node.variant}` : node.id;
 
     const currentLoadedNodes = get(loadedNodeDimensionsAtom);
-    let updatedLoadedNodes = currentLoadedNodes;
     const currentLoadedNode = currentLoadedNodes.get(storageKey);
 
     if (
-      (node.height === 0 && node.width === 0) ||
-      (node.width === currentLoadedNode?.width &&
-        node.height === currentLoadedNode.height &&
-        !currentLoadedNode.updateRequested) ||
-      (node.fromShell &&
-        !!currentLoadedNode &&
-        !currentLoadedNode.updateRequested) ||
-      (!node.fromShell &&
-        !!currentLoadedNode &&
-        !currentLoadedNode.updateRequested)
+      (node.width === 0 && node.height === 0) ||
+      (currentLoadedNode && !currentLoadedNode.updateRequested)
     ) {
       return;
     }
 
-    if (!currentLoadedNode || currentLoadedNode?.updateRequested) {
-      updatedLoadedNodes = new Map(get(loadedNodeDimensionsAtom)).set(
-        storageKey,
-        node,
-      );
-      set(loadedNodeDimensionsAtom, updatedLoadedNodes);
-      hasUpdated = true;
-    }
+    set(batchDimensionUpdates, { key: storageKey, value: node });
 
-    if (hasUpdated) {
-      set(updateZoomBoundariesIfIdle);
-    }
-
-    if (!hasUpdated) {
-      return;
-    }
+    set(updateZoomBoundariesIfIdle);
   },
 );
 
@@ -79,14 +83,5 @@ export const requestNodeDimensionsUpdateAtom = atom(
     }
 
     set(loadedNodeDimensionsAtom, updatedLoadedNodes);
-  },
-);
-
-// Helper function to get dimensions for a specific node and variant
-export const getNodeDimensionsAtom = atom(
-  (get) => (nodeId: string, variant?: string) => {
-    const loadedNodes = get(loadedNodeDimensionsAtom);
-    const storageKey = variant ? `${nodeId}-${variant}` : nodeId;
-    return loadedNodes.get(storageKey);
   },
 );

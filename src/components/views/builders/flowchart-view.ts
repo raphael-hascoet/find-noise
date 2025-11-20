@@ -278,7 +278,7 @@ const flowchartViewActionsAtomGroup = {
         key: "flowchart",
         data: { ...data, nodeTree: updated },
         rezoomNodes: nodesInNewFocusedTree ?? undefined,
-        requestDimensionsForNodes: [`${albumMbid}-compact`],
+        skipAlbumDimensionsUpdate: true,
       });
     },
   ),
@@ -308,6 +308,7 @@ const flowchartViewActionsAtomGroup = {
       key: "flowchart",
       data: { ...data, nodeTree: { ...currentNodeTree } },
       skipRezoom: true,
+      skipAlbumDimensionsUpdate: true,
     });
   }),
   removeChildrenFromNode: atom(

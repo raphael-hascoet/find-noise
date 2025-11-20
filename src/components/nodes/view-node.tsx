@@ -138,11 +138,13 @@ function NodeMotion({
 export type ViewNodeContentProps = {
   hasPosition: boolean;
   nodeDef: ViewNodeDef;
+  updateTriggeredAt?: string;
 };
 
 export const ViewNodeContent = ({
   hasPosition,
   nodeDef,
+  updateTriggeredAt,
 }: ViewNodeContentProps) => {
   const transitioningNode = useAtomValue(transitioningNodesFamily(nodeDef.id));
   const contextWithBackup =
@@ -155,6 +157,7 @@ export const ViewNodeContent = ({
           context={contextWithBackup}
           nodeId={nodeDef.id}
           positioned={hasPosition}
+          updateTriggeredAt={updateTriggeredAt}
         />
       );
     case "album":
@@ -162,6 +165,7 @@ export const ViewNodeContent = ({
         <AlbumCardNodeContent
           nodeId={nodeDef.id}
           positioned={hasPosition}
+          updateTriggeredAt={updateTriggeredAt}
           context={contextWithBackup}
         />
       );
@@ -171,6 +175,7 @@ export const ViewNodeContent = ({
           context={contextWithBackup.data}
           nodeId={nodeDef.id}
           positioned={hasPosition}
+          updateTriggeredAt={updateTriggeredAt}
         />
       );
 
@@ -180,6 +185,7 @@ export const ViewNodeContent = ({
           context={contextWithBackup.data}
           nodeId={nodeDef.id}
           positioned={hasPosition}
+          updateTriggeredAt={updateTriggeredAt}
         />
       );
 

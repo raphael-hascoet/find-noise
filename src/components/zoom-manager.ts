@@ -152,10 +152,13 @@ export const useZoomManager = ({
               },
             })
           : minScaleExtentRef.current;
-
         const { translateX, translateY } = getZoomTransformFromPositionedNodes({
           bounds: zoomFilteredNodesBounds,
           zoomScale,
+          svgSize: {
+            width: svgRef.current?.clientWidth || 0,
+            height: svgRef.current?.clientHeight || 0,
+          },
         });
 
         const extentBounds = createExtentBounds({
@@ -359,21 +362,23 @@ const getPositionedNodesBounds = (
     { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity },
   );
 };
-
 const getZoomTransformFromPositionedNodes = ({
   bounds,
   zoomScale,
+  svgSize,
 }: {
-  bounds: {
-    left: number;
-    top: number;
-    right: number;
-    bottom: number;
-  };
+  bounds: { left: number; top: number; right: number; bottom: number };
   zoomScale: number;
+  svgSize: { width: number; height: number };
 }) => {
-  const translateX = -bounds.left * zoomScale + ZOOM_PADDING;
-  const translateY = -bounds.top * zoomScale + ZOOM_PADDING;
+  const svgCenterX = svgSize.width / 2;
+  const svgCenterY = svgSize.height / 2;
+
+  const contentCenterX = (bounds.left + bounds.right) / 2;
+  const contentCenterY = (bounds.top + bounds.bottom) / 2;
+
+  const translateX = svgCenterX - contentCenterX * zoomScale;
+  const translateY = svgCenterY - contentCenterY * zoomScale;
 
   return { translateX, translateY };
 };
@@ -416,20 +421,37 @@ const getExtentBoundsFromPositionedNodes = ({
 
   const rightBound = Math.max(
     limitingAxis === "x"
-      ? (height + padContentX) * svgSizeRatio
+      ? (height + padContentX) / svgSizeRatio
       : bounds.right + padContentX,
     contentAreaSizeMaxScale.width,
   );
+
   const bottomBound = Math.max(
     limitingAxis === "y"
-      ? (width + padContentY) / svgSizeRatio
+      ? (width + padContentY) * svgSizeRatio
       : bounds.bottom + padContentY,
     contentAreaSizeMaxScale.height,
   );
 
+  const minX0 = bounds.left - padContentX;
+  const minY0 = bounds.top - padContentY;
+
+  const extentWidth = rightBound - minX0;
+  const extentHeight = bottomBound - minY0;
+  const contentWidth = width + 2 * padContentX;
+  const contentHeight = height + 2 * padContentY;
+
+  const dx = (extentWidth - contentWidth) / 2;
+  const dy = (extentHeight - contentHeight) / 2;
+
+  const minX = minX0 - dx;
+  const minY = minY0 - dy;
+  const maxX = rightBound - dx;
+  const maxY = bottomBound - dy;
+
   return [
-    [bounds.left - padContentX, bounds.top - padContentY],
-    [rightBound, bottomBound],
+    [minX, minY],
+    [maxX, maxY],
   ];
 };
 
