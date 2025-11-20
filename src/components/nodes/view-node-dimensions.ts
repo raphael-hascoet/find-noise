@@ -43,40 +43,21 @@ const sendBatchedUpdates = atom(null, (get, set) => {
 export const registerNodeDimensionsAtom = atom(
   null,
   (get, set, node: NodeDimensions) => {
-    let hasUpdated = false;
-
     const storageKey = node.variant ? `${node.id}_${node.variant}` : node.id;
 
     const currentLoadedNodes = get(loadedNodeDimensionsAtom);
     const currentLoadedNode = currentLoadedNodes.get(storageKey);
 
     if (
-      (node.height === 0 && node.width === 0) ||
-      (node.width === currentLoadedNode?.width &&
-        node.height === currentLoadedNode.height &&
-        !currentLoadedNode.updateRequested) ||
-      (node.fromShell &&
-        !!currentLoadedNode &&
-        !currentLoadedNode.updateRequested) ||
-      (!node.fromShell &&
-        !!currentLoadedNode &&
-        !currentLoadedNode.updateRequested)
+      (node.width === 0 && node.height === 0) ||
+      (currentLoadedNode && !currentLoadedNode.updateRequested)
     ) {
       return;
     }
 
-    if (!currentLoadedNode || currentLoadedNode?.updateRequested) {
-      set(batchDimensionUpdates, { key: storageKey, value: node });
-      hasUpdated = true;
-    }
+    set(batchDimensionUpdates, { key: storageKey, value: node });
 
-    if (hasUpdated) {
-      set(updateZoomBoundariesIfIdle);
-    }
-
-    if (!hasUpdated) {
-      return;
-    }
+    set(updateZoomBoundariesIfIdle);
   },
 );
 

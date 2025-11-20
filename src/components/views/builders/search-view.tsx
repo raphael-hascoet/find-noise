@@ -21,7 +21,7 @@ export const searchView: Atom<ViewBuilder<"search">> = atom(() => ({
       ? fuse
           .search(data.query)
           .map((result) => result.item)
-          .slice(0, 30)
+          .slice(0, 14)
       : [];
 
     return new Map<string, ViewNodeDef>([
@@ -70,9 +70,9 @@ export const searchView: Atom<ViewBuilder<"search">> = atom(() => ({
 
     let nextY = 0;
 
-    const resultsTitlePosition = { 
+    const resultsTitlePosition = {
       x: searchResultsTitle.dimensions.width / 2,
-      y: searchResultsTitle.dimensions.height / 2
+      y: searchResultsTitle.dimensions.height / 2,
     };
     nextY += searchResultsTitle.dimensions.height + Y_GAP;
 
@@ -87,7 +87,7 @@ export const searchView: Atom<ViewBuilder<"search">> = atom(() => ({
         dimensions: def.dimensions,
       })),
       baseY: nextY,
-      maxPerRow: 10,
+      maxPerRow: 7,
       yGap: ALBUM_Y_GAP,
     });
 

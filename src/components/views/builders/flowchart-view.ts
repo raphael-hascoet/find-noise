@@ -278,6 +278,7 @@ const flowchartViewActionsAtomGroup = {
         key: "flowchart",
         data: { ...data, nodeTree: updated },
         rezoomNodes: nodesInNewFocusedTree ?? undefined,
+        skipAlbumDimensionsUpdate: true,
       });
     },
   ),

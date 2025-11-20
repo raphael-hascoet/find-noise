@@ -8,6 +8,8 @@ export type NodeContentWrapperPropsBase = {
   nodeId: string;
   positioned: boolean;
   variant?: string;
+  // Useful to retrigger dimensions registering if a shell is still rendered when a new update is requested
+  updateTriggeredAt?: string;
 };
 
 type NodeContentWrapperProps = NodeContentWrapperPropsBase & PropsWithChildren;
@@ -16,6 +18,7 @@ export const NodeContentWrapper = ({
   nodeId,
   children,
   positioned,
+  updateTriggeredAt,
   variant,
 }: NodeContentWrapperProps) => {
   const ref = useRef<HTMLDivElement>(null);
@@ -38,7 +41,7 @@ export const NodeContentWrapper = ({
         variant,
       }),
     );
-  }, [registerNodeDimensions, nodeId, variant, positioned]);
+  }, [registerNodeDimensions, nodeId, variant, positioned, updateTriggeredAt]);
 
   return (
     <div

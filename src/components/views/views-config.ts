@@ -84,6 +84,7 @@ export type NodePositioningState =
       state: "in-progress";
       transitionNodes?: Map<string, PositionedNode>;
       targetNodeDefs: Map<string, ViewNodeDef>;
+      triggeredAt: string;
     }
   | {
       state: "ready";
@@ -125,6 +126,7 @@ export const nodePositioningStateAtom = atom((get): NodePositioningState => {
       state: "in-progress",
       transitionNodes,
       targetNodeDefs: nodeDefs,
+      triggeredAt: new Date().toISOString(),
     };
   }
 

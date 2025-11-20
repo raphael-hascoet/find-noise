@@ -142,6 +142,7 @@ const ViewsRendererContent = function ({
                   <div key={`shell-${id}_compact`} className="opacity-0">
                     <ViewNodeContent
                       hasPosition={false}
+                      updateTriggeredAt={positioningState.triggeredAt}
                       nodeDef={{
                         ...nodeDef,
                         context: {
@@ -157,6 +158,7 @@ const ViewsRendererContent = function ({
                   <div key={`shell-${id}_detailed`} className="opacity-0">
                     <ViewNodeContent
                       hasPosition={false}
+                      updateTriggeredAt={positioningState.triggeredAt}
                       nodeDef={{
                         ...nodeDef,
                         context: {
