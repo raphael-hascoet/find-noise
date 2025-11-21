@@ -3,16 +3,15 @@ import { atom, useAtomValue, useSetAtom } from "jotai";
 import { useMotionValue, useTransform } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, type RefObject } from "react";
 import { ulid } from "ulid";
+import {
+  zoomConstantsAtom,
+  type ZoomConstants,
+} from "../constants/positioning-constants-atoms";
 import { debounce } from "../utils/debounce";
 import {
   nodePositioningStateAtom,
   type PositionedNode,
 } from "./views/views-config";
-
-const ZOOM_PADDING = 100;
-
-const MIN_ZOOM = 0.1;
-const MAX_ZOOM = 1.2;
 
 type ZoomStatusIdle = {
   status: "idle";
@@ -56,6 +55,8 @@ export const useZoomManager = ({
 }: {
   svgRef: RefObject<SVGSVGElement | null>;
 }) => {
+  const zoomConstants = useAtomValue(zoomConstantsAtom);
+
   const d3ZoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown>>(null);
 
   const zoomStatus = useAtomValue(zoomStatusAtom);
@@ -72,7 +73,7 @@ export const useZoomManager = ({
     () => `translate(${tx.get()}px, ${ty.get()}px) scale(${tk.get()})`,
   );
 
-  const minScaleExtentRef = useRef<number>(MIN_ZOOM);
+  const minScaleExtentRef = useRef<number>(zoomConstants.minZoom);
 
   const zoomFilteredPositionedNodes = useMemo(() => {
     if (
@@ -96,6 +97,7 @@ export const useZoomManager = ({
 
   const positionedNodesBounds = useMemo(() => {
     if (nodePositioningState.state === "ready") {
+      console.log("bounds for", nodePositioningState.positionedNodes);
       return getPositionedNodesBounds(nodePositioningState.positionedNodes);
     }
     return null;
@@ -113,7 +115,7 @@ export const useZoomManager = ({
 
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
-      .scaleExtent([MIN_ZOOM, MAX_ZOOM])
+      .scaleExtent([zoomConstants.minZoom, zoomConstants.maxZoom])
       .on("zoom", (e) => {
         const et = e.transform;
         tx.set(et.x);
@@ -150,6 +152,7 @@ export const useZoomManager = ({
                 width: svgRef.current?.clientWidth || 0,
                 height: svgRef.current?.clientHeight || 0,
               },
+              zoomConstants,
             })
           : minScaleExtentRef.current;
         const { translateX, translateY } = getZoomTransformFromPositionedNodes({
@@ -228,6 +231,7 @@ export const useZoomManager = ({
           width: svgWidth,
         },
         scale,
+        zoomConstants,
       });
     },
     [positionedNodesBounds, d3ZoomRef],
@@ -246,10 +250,13 @@ export const useZoomManager = ({
       }
       console.log("Update extent bounds:", { scale, extentBounds });
       d3ZoomRef.current
-        .scaleExtent([Math.max(scale, MIN_ZOOM), MAX_ZOOM])
+        .scaleExtent([
+          Math.max(scale, zoomConstants.minZoom),
+          zoomConstants.maxZoom,
+        ])
         .translateExtent(extentBounds);
     },
-    [d3ZoomRef],
+    [d3ZoomRef, zoomConstants],
   );
 
   const updateMinScaleExtent = useCallback(() => {
@@ -265,6 +272,7 @@ export const useZoomManager = ({
         width: svgWidth,
         height: svgHeight,
       },
+      zoomConstants,
     });
   }, [positionedNodesBounds, svgRef, minScaleExtentRef]);
 
@@ -286,7 +294,7 @@ export const useZoomManager = ({
 
         const k = Math.max(
           minScaleExtentRef.current,
-          Math.min(currentScale, MAX_ZOOM),
+          Math.min(currentScale, zoomConstants.maxZoom),
         );
 
         const currentTransform = new d3.ZoomTransform(k, tx.get(), ty.get());
@@ -389,6 +397,7 @@ const getExtentBoundsFromPositionedNodes = ({
   bounds,
   svgSize,
   scale,
+  zoomConstants,
 }: {
   bounds: {
     left: number;
@@ -398,6 +407,7 @@ const getExtentBoundsFromPositionedNodes = ({
   };
   svgSize: { width: number; height: number };
   scale: number;
+  zoomConstants: ZoomConstants;
 }): ExtentBounds => {
   const svgWidth = svgSize.width;
   const svgHeight = svgSize.height;
@@ -405,12 +415,12 @@ const getExtentBoundsFromPositionedNodes = ({
   const width = bounds.right - bounds.left;
   const height = bounds.bottom - bounds.top;
 
-  const padContentX = ZOOM_PADDING / scale;
-  const padContentY = ZOOM_PADDING / scale;
+  const padContentX = zoomConstants.zoomPadding / scale;
+  const padContentY = zoomConstants.zoomPadding / scale;
 
   const contentAreaSizeMaxScale = {
-    width: svgWidth / MAX_ZOOM,
-    height: svgHeight / MAX_ZOOM,
+    width: svgWidth / zoomConstants.maxZoom,
+    height: svgHeight / zoomConstants.maxZoom,
   };
 
   const svgSizeRatio = svgWidth / svgHeight;
@@ -428,7 +438,7 @@ const getExtentBoundsFromPositionedNodes = ({
 
   const bottomBound = Math.max(
     limitingAxis === "y"
-      ? (width + padContentY) * svgSizeRatio
+      ? (width + padContentY) / svgSizeRatio
       : bounds.bottom + padContentY,
     contentAreaSizeMaxScale.height,
   );
@@ -458,6 +468,7 @@ const getExtentBoundsFromPositionedNodes = ({
 const getScaleFromBoundsAndSvgSize = ({
   bounds,
   svgSize,
+  zoomConstants,
 }: {
   bounds: {
     left: number;
@@ -466,17 +477,18 @@ const getScaleFromBoundsAndSvgSize = ({
     bottom: number;
   };
   svgSize: { width: number; height: number };
+  zoomConstants: ZoomConstants;
 }) => {
   const width = bounds.right - bounds.left;
   const height = bounds.bottom - bounds.top;
 
   return Math.max(
     Math.min(
-      (svgSize.width - 2 * ZOOM_PADDING) / width,
-      (svgSize.height - 2 * ZOOM_PADDING) / height,
-      MAX_ZOOM,
+      (svgSize.width - 2 * zoomConstants.zoomPadding) / width,
+      (svgSize.height - 2 * zoomConstants.zoomPadding) / height,
+      zoomConstants.maxZoom,
     ),
-    MIN_ZOOM,
+    zoomConstants.minZoom,
   );
 };
 

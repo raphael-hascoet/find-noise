@@ -6,7 +6,7 @@ import { buildGridPositions } from "../utils/build-utils";
 import { type ViewBuilder } from "../views-config";
 
 export const searchView: Atom<ViewBuilder<"search">> = atom(() => ({
-  buildNodes: ({ selectors, data }) => {
+  buildNodes: ({ selectors, data, constants }) => {
     const allAlbums = selectors.allAlbums();
 
     // Create Fuse instance for fuzzy search on album names
@@ -21,7 +21,7 @@ export const searchView: Atom<ViewBuilder<"search">> = atom(() => ({
       ? fuse
           .search(data.query)
           .map((result) => result.item)
-          .slice(0, 14)
+          .slice(0, constants.search.searchCount)
       : [];
 
     return new Map<string, ViewNodeDef>([
@@ -59,7 +59,10 @@ export const searchView: Atom<ViewBuilder<"search">> = atom(() => ({
     ]);
   },
 
-  buildNodePositions: ({ nodeDefsWithDimensions }): Map<string, Position> => {
+  buildNodePositions: ({
+    nodeDefsWithDimensions,
+    constants,
+  }): Map<string, Position> => {
     const searchResultsTitle = nodeDefsWithDimensions.get(
       "search-results-title",
     );
@@ -87,7 +90,7 @@ export const searchView: Atom<ViewBuilder<"search">> = atom(() => ({
         dimensions: def.dimensions,
       })),
       baseY: nextY,
-      maxPerRow: 7,
+      maxPerRow: constants.search.maxPerRow,
       yGap: ALBUM_Y_GAP,
     });
 

@@ -1,7 +1,10 @@
+import { useIsMobileBootstrap } from "../utils/is-mobile";
 import { AppHeader } from "./header/app-header";
 import { ViewsRenderer } from "./views/views-renderer";
 
 function DrawArea() {
+  useIsMobileBootstrap();
+
   return (
     <div
       style={{

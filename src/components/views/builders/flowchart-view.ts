@@ -1,5 +1,6 @@
 import * as d3 from "d3";
 import { atom, useSetAtom, type Atom } from "jotai";
+import { viewsConstantsAtom } from "../../../constants/positioning-constants-atoms";
 import { albumDataSelectorsAtom } from "../../../data/albums-pool-atoms";
 import {
   simpleRecommendAlbums,
@@ -208,6 +209,7 @@ const flowchartViewActionsAtomGroup = {
   addRecommendationsToNode: atom(
     null,
     (get, set, { albumMbid, params }: AddRecommendationsToNodeParams) => {
+      const constants = get(viewsConstantsAtom);
       const view = get(activeViewConfigReadOnlyAtom);
 
       if (!view || view.key !== "flowchart") {
@@ -231,6 +233,7 @@ const flowchartViewActionsAtomGroup = {
         seed,
         all: albums,
         excludedIds: existingIds,
+        topX: constants.flowchart.childrenPerExpand,
       });
       const currentRoot: ViewNodeDef =
         data.nodeTree ??
@@ -278,7 +281,7 @@ const flowchartViewActionsAtomGroup = {
         key: "flowchart",
         data: { ...data, nodeTree: updated },
         rezoomNodes: nodesInNewFocusedTree ?? undefined,
-        skipAlbumDimensionsUpdate: true,
+        skipAlbumDimensionsUpdate: { exceptIds: [albumMbid] },
       });
     },
   ),

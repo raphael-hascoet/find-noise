@@ -3,6 +3,10 @@ import { atom } from "jotai";
 import { atomFamily } from "jotai/utils";
 import { frame } from "motion";
 import {
+  viewsConstantsAtom,
+  type ViewsConstants,
+} from "../../constants/positioning-constants-atoms";
+import {
   albumDataSelectorsAtom,
   type AlbumSelectors,
 } from "../../data/albums-pool-atoms";
@@ -50,12 +54,14 @@ export type ViewBuilder<Key extends ViewKey> = {
   buildNodes: (params: {
     data: ViewData<Key>;
     selectors: AlbumSelectors;
+    constants: ViewsConstants;
   }) => Map<string, ViewNodeDef>;
 
   buildNodePositions: (params: {
     data: ViewData<Key>;
     selectors: AlbumSelectors;
     nodeDefsWithDimensions: Map<string, NodeDefWithDimensions>;
+    constants: ViewsConstants;
   }) => Map<string, Position>;
 
   transitionConfig?: {
@@ -92,6 +98,7 @@ export type NodePositioningState =
     };
 
 export const nodePositioningStateAtom = atom((get): NodePositioningState => {
+  const constants = get(viewsConstantsAtom);
   const nodeDefs = get(calculatedNodeDefsAtom);
 
   if (!nodeDefs?.size) return { state: "init" };
@@ -141,6 +148,7 @@ export const nodePositioningStateAtom = atom((get): NodePositioningState => {
     data: viewConfig.data as any,
     selectors,
     nodeDefsWithDimensions,
+    constants,
   });
 
   const positionedNodes = new Map<string, PositionedNode>();
@@ -165,6 +173,7 @@ export const activeViewConfigReadOnlyAtom = atom((get) =>
 );
 
 const calculatedNodeDefsAtom = atom((get) => {
+  const constants = get(viewsConstantsAtom);
   const viewConfig = get(activeViewConfigAtom);
   const selectors = get(albumDataSelectorsAtom);
 
@@ -176,13 +185,14 @@ const calculatedNodeDefsAtom = atom((get) => {
   return builder.buildNodes({
     data: viewConfig.data as any,
     selectors,
+    constants,
   });
 });
 
 type SetActiveViewParams = ViewConfig & {
   skipRezoom?: boolean;
   rezoomNodes?: string[];
-  skipAlbumDimensionsUpdate?: boolean;
+  skipAlbumDimensionsUpdate?: boolean | { exceptIds?: string[] };
 };
 
 export const setActiveViewAtom = atom(
@@ -197,12 +207,23 @@ export const setActiveViewAtom = atom(
         const posNodes = new Map(currentPositioningState.positionedNodes);
         set(transitioningNodesAtom, posNodes);
 
-        if (!config.skipAlbumDimensionsUpdate) {
+        if (
+          !config.skipAlbumDimensionsUpdate ||
+          typeof config.skipAlbumDimensionsUpdate === "object"
+        ) {
           const dimensionUpdateRequests = Array.from(
             currentPositioningState.positionedNodes.entries(),
           )
-            .filter(([_, node]) => node.nodeDef.context.type === "album")
-            .map(([id]) => `${id}_compact`);
+            .filter(
+              ([_, node]) =>
+                node.nodeDef.context.type === "album" &&
+                (typeof config.skipAlbumDimensionsUpdate === "object"
+                  ? config.skipAlbumDimensionsUpdate.exceptIds?.includes(
+                      node.nodeDef.id,
+                    )
+                  : true),
+            )
+            .flatMap(([id]) => [`${id}_compact`, `${id}_detailed`]);
 
           if (dimensionUpdateRequests.length) {
             set(requestNodeDimensionsUpdateAtom, dimensionUpdateRequests);
