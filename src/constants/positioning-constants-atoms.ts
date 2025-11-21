@@ -2,7 +2,8 @@ import { atom } from "jotai";
 import { isMobileAtom } from "../utils/is-mobile";
 
 export type ZoomConstants = {
-  zoomPadding: number;
+  zoomPaddingX: number;
+  zoomPaddingY: number;
   minZoom: number;
   maxZoom: number;
 };
@@ -12,12 +13,14 @@ export const zoomConstantsAtom = atom<ZoomConstants>((get) => {
 
   return !isMobile
     ? {
-        zoomPadding: 100,
+        zoomPaddingX: 100,
+        zoomPaddingY: 150,
         minZoom: 0.1,
         maxZoom: 2,
       }
     : {
-        zoomPadding: 25,
+        zoomPaddingX: 25,
+        zoomPaddingY: 85,
         minZoom: 0.2,
         maxZoom: 1.5,
       };

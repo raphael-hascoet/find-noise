@@ -415,8 +415,8 @@ const getExtentBoundsFromPositionedNodes = ({
   const width = bounds.right - bounds.left;
   const height = bounds.bottom - bounds.top;
 
-  const padContentX = zoomConstants.zoomPadding / scale;
-  const padContentY = zoomConstants.zoomPadding / scale;
+  const padContentX = zoomConstants.zoomPaddingX / scale;
+  const padContentY = zoomConstants.zoomPaddingY / scale;
 
   const contentAreaSizeMaxScale = {
     width: svgWidth / zoomConstants.maxZoom,
@@ -484,8 +484,8 @@ const getScaleFromBoundsAndSvgSize = ({
 
   return Math.max(
     Math.min(
-      (svgSize.width - 2 * zoomConstants.zoomPadding) / width,
-      (svgSize.height - 2 * zoomConstants.zoomPadding) / height,
+      (svgSize.width - 2 * zoomConstants.zoomPaddingX) / width,
+      (svgSize.height - 2 * zoomConstants.zoomPaddingY) / height,
       zoomConstants.maxZoom,
     ),
     zoomConstants.minZoom,
