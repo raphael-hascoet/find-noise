@@ -47,6 +47,7 @@ export const albumsForArtistView: Atom<ViewBuilder<"albumsForArtist">> = atom(
       data: { artistId },
       selectors,
       nodeDefsWithDimensions,
+      constants,
     }): Map<string, Position> => {
       const X_GAP = 50;
       const Y_GAP = 50;
@@ -55,16 +56,14 @@ export const albumsForArtistView: Atom<ViewBuilder<"albumsForArtist">> = atom(
 
       if (nodeDefsWithDimensions.size === 0) return new Map();
 
-      const MAX_ALBUMS_PER_ROW = 6;
-
       let nextY = 0;
 
       let positionMap = new Map<string, Position>();
       const artistDimensions = nodeDefsWithDimensions.get(artistId)?.dimensions;
       if (artistDimensions) {
-        positionMap.set(artistId, { 
+        positionMap.set(artistId, {
           x: artistDimensions.width / 2,
-          y: artistDimensions.height / 2
+          y: artistDimensions.height / 2,
         });
         nextY += artistDimensions.height + Y_GAP;
       }
@@ -79,7 +78,7 @@ export const albumsForArtistView: Atom<ViewBuilder<"albumsForArtist">> = atom(
 
       const { positions: gridPositions } = buildGridPositions({
         nodes: albumsDimensions,
-        maxPerRow: MAX_ALBUMS_PER_ROW,
+        maxPerRow: constants.albumsForArtist.maxPerRow,
         baseY: nextY,
         xGap: X_GAP,
         yGap: Y_GAP,

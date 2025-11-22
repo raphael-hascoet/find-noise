@@ -167,6 +167,9 @@ export const ViewNodeContent = ({
           positioned={hasPosition}
           updateTriggeredAt={updateTriggeredAt}
           context={contextWithBackup}
+          hasChildren={
+            !!nodeDef?.children?.length && nodeDef.children.length > 0
+          }
         />
       );
     case "section-title":

@@ -46,7 +46,7 @@ export const NodeContentWrapper = ({
   return (
     <div
       ref={ref}
-      className={`${clsx({ "max-h-fit": !positioned, "max-w-fit": !positioned, "flex-1": !positioned, absolute: positioned, "inset-0": positioned })}`}
+      className={`${clsx({ "h-fit": !positioned, "max-h-fit": !positioned, "w-fit": !positioned, "max-w-fit": !positioned, "flex-1": !positioned, absolute: positioned, "inset-0": positioned })}`}
     >
       {children}
     </div>

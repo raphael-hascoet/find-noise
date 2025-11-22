@@ -7,9 +7,12 @@ import { buildGridPositions } from "../utils/build-utils";
 import { type ViewBuilder, setActiveViewAtom } from "../views-config";
 
 export const homeView: Atom<ViewBuilder<"home">> = atom(() => ({
-  buildNodes: ({ selectors, data }) => {
+  buildNodes: ({ selectors, data, constants }) => {
     console.log("Building home view nodes with seed:", data.seed);
-    const randomAlbums = selectors?.randomN(5, data.seed);
+    const randomAlbums = selectors?.randomN(
+      constants.home.recsCount,
+      data.seed,
+    );
 
     return new Map<string, ViewNodeDef>([
       [
@@ -58,7 +61,10 @@ export const homeView: Atom<ViewBuilder<"home">> = atom(() => ({
     ]);
   },
 
-  buildNodePositions: ({ nodeDefsWithDimensions }): Map<string, Position> => {
+  buildNodePositions: ({
+    nodeDefsWithDimensions,
+    constants,
+  }): Map<string, Position> => {
     const randomPicksTitle = nodeDefsWithDimensions.get("random-picks");
     if (!randomPicksTitle) return new Map();
 
@@ -74,6 +80,7 @@ export const homeView: Atom<ViewBuilder<"home">> = atom(() => ({
         dimensions: def.dimensions,
       })),
       baseY: randomPicksY,
+      maxPerRow: constants.home.maxPerRow,
     });
 
     return new Map<string, Position>([

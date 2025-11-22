@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { useAtomValue, useSetAtom } from "jotai";
 import { GitGraph, ZoomIn } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -21,6 +22,7 @@ import {
 
 type AlbumCardProps = {
   context: AlbumContext;
+  hasChildren?: boolean;
 } & NodeContentWrapperPropsBase;
 
 export type AlbumCardVariant = "compact" | "detailed";
@@ -71,7 +73,11 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
     showReleaseYear,
     showZoomInButton,
     showDetailedGenresAndDescriptors,
-  } = useContentOptionsForAlbumCard({ parentView, variant });
+  } = useContentOptionsForAlbumCard({
+    parentView,
+    variant,
+    hasChildren: graphNodeProps.hasChildren,
+  });
 
   return (
     <NodeContentWrapper {...graphNodeProps} variant={variant}>
@@ -119,19 +125,8 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
               >
                 {album ? album.release : "Unknown Album"}
               </motion.p>
-              <motion.div
-                className="flex items-center"
-                initial={false}
-                variants={{
-                  compact: {
-                    flexDirection: "column",
-                    gap: "0.25em",
-                  },
-                  detailed: {
-                    flexDirection: "row",
-                    gap: "0.25em",
-                  },
-                }}
+              <div
+                className={`flex items-center gap-1 ${clsx({ "flex-col": variant === "compact", "flex-row": variant === "detailed" })}`}
               >
                 {showArtistName && (
                   <motion.p
@@ -160,25 +155,30 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                       className="text-gray-500"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      transition={{ duration: 0.2 }}
                     >
                       -
                     </motion.span>
                   )}
-                {showReleaseYear && (
+                {variant === "compact" && showReleaseYear && (
+                  <p className="text-center font-sans text-xs text-gray-400">
+                    {album
+                      ? album["release-date"].split("-")[0]
+                      : "Unknown Release Date"}
+                  </p>
+                )}
+                {variant === "detailed" && showReleaseYear && (
                   <motion.p
-                    className="text-center font-sans text-gray-400"
-                    variants={{
-                      compact: { fontSize: "var(--text-xs)" },
-                      detailed: { fontSize: "var(--text-sm)" },
-                    }}
+                    className="text-center font-sans text-sm text-gray-400"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    style={{ overflow: "hidden" }}
                   >
                     {album
                       ? album["release-date"].split("-")[0]
                       : "Unknown Release Date"}
                   </motion.p>
                 )}
-              </motion.div>
+              </div>
             </div>
           </div>
           <AnimatePresence>
@@ -218,7 +218,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                   },
                 });
               }}
-              className="pointer-events-auto cursor-pointer rounded-full bg-slate-700 p-1.5 text-gray-400 shadow-sm/25 shadow-gray-950 transition-colors hover:bg-slate-800"
+              className="pointer-events-auto cursor-pointer rounded-full bg-slate-700 p-1.5 text-gray-300/90 shadow-sm/25 shadow-gray-950 transition-colors hover:bg-slate-700/70 active:bg-slate-700/50"
             >
               <ZoomIn width={16} height={16} />
             </button>
@@ -245,7 +245,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                   },
                 });
               }}
-              className="pointer-events-auto cursor-pointer rounded-full bg-slate-700 p-1.5 text-gray-400 shadow-sm/25 shadow-gray-950 transition-colors hover:bg-slate-800"
+              className="pointer-events-auto cursor-pointer rounded-full bg-slate-700 p-1.5 text-gray-300/90 shadow-sm/25 shadow-gray-950 transition-colors hover:bg-slate-700/70 active:bg-slate-700/50"
             >
               <GitGraph width={16} height={16} />
             </button>
@@ -259,13 +259,15 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
 const useContentOptionsForAlbumCard = ({
   parentView,
   variant,
+  hasChildren,
 }: {
   parentView: AlbumCardParentView;
   variant?: AlbumCardVariant;
+  hasChildren?: boolean;
 }) => {
   const options: AlbumCardContentOptions = {
     showArtistName: variant === "detailed" || parentView !== "albumsForArtist",
-    showAddRecommendationsButton: parentView === "flowchart",
+    showAddRecommendationsButton: parentView === "flowchart" && !hasChildren,
     showReleaseYear: variant === "detailed" || parentView === "albumsForArtist",
     showZoomInButton:
       parentView === "home" ||

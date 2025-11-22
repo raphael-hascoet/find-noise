@@ -43,6 +43,7 @@ const sendBatchedUpdates = atom(null, (get, set) => {
 export const registerNodeDimensionsAtom = atom(
   null,
   (get, set, node: NodeDimensions) => {
+    // debugger;
     const storageKey = node.variant ? `${node.id}_${node.variant}` : node.id;
 
     const currentLoadedNodes = get(loadedNodeDimensionsAtom);
