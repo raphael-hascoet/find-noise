@@ -430,16 +430,12 @@ const getExtentBoundsFromPositionedNodes = ({
   const limitingAxis = svgSizeRatio < contentSizeRatio ? "y" : "x";
 
   const rightBound = Math.max(
-    limitingAxis === "x"
-      ? (height + padContentX) / svgSizeRatio
-      : bounds.right + padContentX,
+    limitingAxis === "x" ? height * svgSizeRatio : bounds.right + padContentX,
     contentAreaSizeMaxScale.width,
   );
 
   const bottomBound = Math.max(
-    limitingAxis === "y"
-      ? (width + padContentY) / svgSizeRatio
-      : bounds.bottom + padContentY,
+    limitingAxis === "y" ? width / svgSizeRatio : bounds.bottom + padContentY,
     contentAreaSizeMaxScale.height,
   );
 
