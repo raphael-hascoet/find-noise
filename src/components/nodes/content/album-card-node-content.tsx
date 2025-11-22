@@ -218,7 +218,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                   },
                 });
               }}
-              className="pointer-events-auto cursor-pointer rounded-full bg-slate-700 p-1.5 text-gray-400 shadow-sm/25 shadow-gray-950 transition-colors hover:bg-slate-700/70 active:bg-slate-700/50"
+              className="pointer-events-auto cursor-pointer rounded-full bg-slate-700 p-1.5 text-gray-300/90 shadow-sm/25 shadow-gray-950 transition-colors hover:bg-slate-700/70 active:bg-slate-700/50"
             >
               <ZoomIn width={16} height={16} />
             </button>
@@ -245,7 +245,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                   },
                 });
               }}
-              className="pointer-events-auto cursor-pointer rounded-full bg-slate-700 p-1.5 text-gray-400 shadow-sm/25 shadow-gray-950 transition-colors hover:bg-slate-700/70 active:bg-slate-700/50"
+              className="pointer-events-auto cursor-pointer rounded-full bg-slate-700 p-1.5 text-gray-300/90 shadow-sm/25 shadow-gray-950 transition-colors hover:bg-slate-700/70 active:bg-slate-700/50"
             >
               <GitGraph width={16} height={16} />
             </button>

@@ -25,7 +25,7 @@ export const IconButtonNodeContent = memo(function IconButtonNodeContent({
     <NodeContentWrapper {...graphNodeProps}>
       <button
         onClick={onClick}
-        className="cursor-pointer rounded-full bg-gray-600 p-2 text-gray-300 shadow-lg/25 shadow-gray-950 hover:bg-gray-500"
+        className="pointer-events-auto cursor-pointer rounded-full bg-slate-700 p-2 text-gray-300/90 shadow-lg/25 shadow-gray-950 transition-colors hover:bg-slate-700/85 active:bg-slate-700/70"
         aria-label={context.ariaLabel}
       >
         {context.icon}
