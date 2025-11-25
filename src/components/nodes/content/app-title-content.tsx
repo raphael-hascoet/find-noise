@@ -15,7 +15,7 @@ export const AppTitleNodeContent = memo(function AppTitleNodeContent({
           className="text-2xl text-gray-300/80"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.5, duration: 1.5 }}
+          transition={{ duration: 1, ease: "easeOut" }}
         >
           Welcome to
         </motion.span>
@@ -23,7 +23,7 @@ export const AppTitleNodeContent = memo(function AppTitleNodeContent({
           className="text-5xl font-bold text-violet-600"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.3, duration: 1.5 }}
+          transition={{ delay: 0.8, duration: 1, ease: "easeOut" }}
         >
           Find Noise
         </motion.span>

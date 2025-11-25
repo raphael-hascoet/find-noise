@@ -52,8 +52,12 @@ export const updateZoomBoundariesIfIdle = atom(null, (get, set) => {
 
 export const useZoomManager = ({
   svgRef,
+  zoomIsInitialized,
+  onZoomInitialized,
 }: {
   svgRef: RefObject<SVGSVGElement | null>;
+  zoomIsInitialized: boolean;
+  onZoomInitialized: () => void;
 }) => {
   const zoomConstants = useAtomValue(zoomConstantsAtom);
 
@@ -178,9 +182,11 @@ export const useZoomManager = ({
           requestAnimationFrame(() => {
             if (!d3ZoomRef.current) return;
 
+            onZoomInitialized();
+
             zoomRoot
               .transition()
-              .duration(600)
+              .duration(zoomIsInitialized ? 600 : 0)
               .ease(d3.easeSinInOut)
               .call(
                 d3ZoomRef.current.transform,

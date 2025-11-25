@@ -6,6 +6,7 @@ type ViewNodeDefBase = {
   id: string;
   children?: ViewNodeDef[];
   onZoomClick?: () => void;
+  appearanceDelay?: number;
 };
 
 export type AppTitleContext = {

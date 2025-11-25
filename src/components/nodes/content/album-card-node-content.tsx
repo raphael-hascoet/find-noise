@@ -192,7 +192,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                   hidden: { opacity: 0 },
                   show: {
                     opacity: 1,
-                    transition: { delay: 0.3, duration: 0.3 },
+                    transition: { delay: 0.5, duration: 0.3 },
                   },
                   hide: { opacity: 0, transition: { duration: 0.1 } },
                 }}

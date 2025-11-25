@@ -109,7 +109,12 @@ const AboutModalButton = forwardRef<HTMLDivElement, AboutModalButtonProps>(
             borderRadius: 16,
           },
         }}
-        transition={{ type: "spring", stiffness: 500, damping: 45 }}
+        transition={{
+          type: "spring",
+          stiffness: 250,
+          damping: 35,
+          mass: 1.2,
+        }}
         onClick={() => !isOpen && setIsOpen?.(true)}
       >
         <motion.div
@@ -148,7 +153,7 @@ const AboutModalButton = forwardRef<HTMLDivElement, AboutModalButtonProps>(
                 initial={{ opacity: 0 }}
                 animate={{
                   opacity: 1,
-                  transition: { delay: 0.3, duration: 0.2 },
+                  transition: { delay: 0.6, duration: 0.2 },
                 }}
                 exit={{
                   opacity: 0,

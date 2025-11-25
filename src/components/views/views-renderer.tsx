@@ -1,7 +1,13 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { ZoomIn, ZoomOut } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useRef, type RefObject } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { ulid } from "ulid";
 import { COLORS } from "../../constants/colors";
 import { D3SvgRenderer } from "../../d3/renderer";
@@ -52,6 +58,8 @@ const ViewsRendererContent = function ({
   const rendererRef = useRef<D3SvgRenderer | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
+  const [zoomIsInitialized, setZoomIsInitialized] = useState(false);
+
   const links = useAtomValue(calculatedLinksAtom);
 
   const clearTransitionNodes = useSetAtom(clearTransitioningNodesAtom);
@@ -68,6 +76,8 @@ const ViewsRendererContent = function ({
 
   const { overlayTransform, onZoom } = useZoomManager({
     svgRef,
+    zoomIsInitialized,
+    onZoomInitialized: () => setZoomIsInitialized(true),
   });
 
   const visiblePositionedNodes =
@@ -183,6 +193,7 @@ const ViewsRendererContent = function ({
               );
             })}
           {visiblePositionedNodes &&
+            zoomIsInitialized &&
             Array.from(visiblePositionedNodes.entries()).map(
               ([nodeId, node]) => {
                 return (

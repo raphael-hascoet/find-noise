@@ -35,6 +35,7 @@ export const homeView: Atom<ViewBuilder<"home">> = atom(() => ({
               label: "Random Picks",
             },
           },
+          appearanceDelay: 1.5,
         } satisfies ViewNodeDef,
       ],
       [
@@ -49,6 +50,7 @@ export const homeView: Atom<ViewBuilder<"home">> = atom(() => ({
               onClick: homeViewActionsAtomGroup.refreshRandomPicks,
             },
           },
+          appearanceDelay: 1.5,
         } satisfies ViewNodeDef,
       ],
       ...randomAlbums.map((album) => {
@@ -65,6 +67,7 @@ export const homeView: Atom<ViewBuilder<"home">> = atom(() => ({
                 parentView: "home",
               },
             },
+            appearanceDelay: 1.5,
           },
         ] satisfies [string, ViewNodeDef];
       }),
