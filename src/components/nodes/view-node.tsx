@@ -113,7 +113,7 @@ function NodeMotion({
       ref={nodeRef}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      exit={{ opacity: 0, transition: { duration: 0.3 } }}
       transition={{
         opacity: { duration: 0.6, ease: "easeOut" },
       }}
