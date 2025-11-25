@@ -8,6 +8,7 @@ import { D3SvgRenderer } from "../../d3/renderer";
 import { albumDataSelectorsAtom } from "../../data/albums-pool-atoms";
 import type { PropagateEvent } from "../../utils/propagate-events";
 import { FlowchartLinks } from "../flowchart/flowchart-links";
+import { AboutButton } from "../footer/about-button";
 import { ViewNode, ViewNodeContent } from "../nodes/view-node";
 import { useZoomManager } from "../zoom-manager";
 import {
@@ -195,6 +196,7 @@ const ViewsRendererContent = function ({
             )}
         </AnimatePresence>
       </motion.div>
+      <AboutButton />
       <ZoomButtons
         onZoomIn={() => onZoom(1.2)}
         onZoomOut={() => onZoom(1 / 1.2)}
