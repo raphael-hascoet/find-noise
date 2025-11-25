@@ -8,6 +8,11 @@ type ViewNodeDefBase = {
   onZoomClick?: () => void;
 };
 
+export type AppTitleContext = {
+  type: "app-title";
+  data: {};
+};
+
 export type ArtistContext = {
   type: "artist";
   data: {
@@ -31,6 +36,7 @@ export type IconButtonContext = {
 };
 
 export type ViewNodeDefByType =
+  | AppTitleContext
   | ArtistContext
   | AlbumContext
   | SectionTitleContext

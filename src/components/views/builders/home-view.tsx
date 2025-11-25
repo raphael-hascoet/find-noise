@@ -16,6 +16,16 @@ export const homeView: Atom<ViewBuilder<"home">> = atom(() => ({
 
     return new Map<string, ViewNodeDef>([
       [
+        "app-title",
+        {
+          id: "app-title",
+          context: {
+            type: "app-title",
+            data: {},
+          },
+        } satisfies ViewNodeDef,
+      ],
+      [
         "random-picks",
         {
           id: "random-picks",
@@ -65,6 +75,16 @@ export const homeView: Atom<ViewBuilder<"home">> = atom(() => ({
     nodeDefsWithDimensions,
     constants,
   }): Map<string, Position> => {
+    const APP_TITLE_GAP = 35;
+
+    const appTitle = nodeDefsWithDimensions.get("app-title");
+    if (!appTitle) return new Map();
+
+    const appTitlePosition = {
+      x: appTitle.dimensions.width / 2,
+      y: appTitle.dimensions.height / 2,
+    };
+
     const randomPicksTitle = nodeDefsWithDimensions.get("random-picks");
     if (!randomPicksTitle) return new Map();
 
@@ -72,7 +92,11 @@ export const homeView: Atom<ViewBuilder<"home">> = atom(() => ({
       (def) => def.nodeDef.context.type === "album",
     );
 
-    const randomPicksY = randomPicksTitle.dimensions.height + 20;
+    const randomPicksY =
+      appTitle.dimensions.height +
+      APP_TITLE_GAP +
+      randomPicksTitle.dimensions.height +
+      20;
 
     const { positions: albumPositions } = buildGridPositions({
       nodes: randomPicks.map((def) => ({
@@ -84,18 +108,25 @@ export const homeView: Atom<ViewBuilder<"home">> = atom(() => ({
     });
 
     return new Map<string, Position>([
+      ["app-title", appTitlePosition],
       [
         "random-picks",
         {
           x: randomPicksTitle.dimensions.width / 2,
-          y: randomPicksTitle.dimensions.height / 2,
+          y:
+            appTitle.dimensions.height +
+            APP_TITLE_GAP +
+            randomPicksTitle.dimensions.height / 2,
         },
       ],
       [
         "refresh-random-picks-button",
         {
           x: randomPicksTitle.dimensions.width + 40,
-          y: randomPicksTitle.dimensions.height / 2,
+          y:
+            appTitle.dimensions.height +
+            APP_TITLE_GAP +
+            randomPicksTitle.dimensions.height / 2,
         },
       ],
       ...Array.from(albumPositions.entries()).map(

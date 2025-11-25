@@ -11,6 +11,7 @@ import {
   type PositionedNode,
 } from "../views/views-config";
 import { AlbumCardNodeContent } from "./content/album-card-node-content";
+import { AppTitleNodeContent } from "./content/app-title-content";
 import { ArtistCardNodeContent } from "./content/artist-card-node-content";
 import { IconButtonNodeContent } from "./content/icon-button-node-content";
 import { SectionTitleNodeContent } from "./content/section-title-node-content";
@@ -186,6 +187,15 @@ export const ViewNodeContent = ({
       return (
         <IconButtonNodeContent
           context={contextWithBackup.data}
+          nodeId={nodeDef.id}
+          positioned={hasPosition}
+          updateTriggeredAt={updateTriggeredAt}
+        />
+      );
+
+    case "app-title":
+      return (
+        <AppTitleNodeContent
           nodeId={nodeDef.id}
           positioned={hasPosition}
           updateTriggeredAt={updateTriggeredAt}

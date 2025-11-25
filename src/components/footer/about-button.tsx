@@ -89,7 +89,7 @@ const AboutModalButton = forwardRef<HTMLDivElement, AboutModalButtonProps>(
           button: {
             position: "fixed",
             left: 20,
-            top: "calc(100% - 50px)",
+            top: "calc(100% - 51px)",
             x: 0,
             y: 0,
             width: 75,
