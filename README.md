@@ -2,7 +2,7 @@
 
 A music discovery application that visualizes album relationships through interactive flowcharts and generates recommendations based on genre and descriptor overlap.
 
-[Live App](DEPLOYMENT_URL_PLACEHOLDER)
+### <a href="https://find-noise.pages.dev/">View the app</b></a>
 
 ## Features
 
