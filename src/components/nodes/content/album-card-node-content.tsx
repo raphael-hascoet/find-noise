@@ -87,7 +87,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
             detailed: {
               width: "24rem",
               maxWidth: "24rem",
-              padding: "0.125rem",
+              padding: "0.25rem",
             },
           }}
         >
@@ -113,14 +113,18 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
               <motion.p
                 className="max-w-full text-center font-sans break-words text-gray-300"
                 variants={{
-                  compact: { fontSize: "var(--text-xs)" },
-                  detailed: { fontSize: "var(--text-sm)" },
+                  compact: {
+                    fontSize: "var(--text-sm)",
+                  },
+                  detailed: {
+                    fontSize: "var(--text-md)",
+                  },
                 }}
               >
                 {album ? album.release : "Unknown Album"}
               </motion.p>
               {parentView === "albumsForArtist" && (
-                <p className="text-center font-sans text-xs text-gray-400">
+                <p className={`text-center font-sans text-sm text-gray-400`}>
                   {album
                     ? album["release-date"].split("-")[0]
                     : "Unknown Release Date"}
@@ -128,7 +132,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
               )}
               {showArtistName && variant === "compact" && (
                 <motion.p
-                  className="pointer-events-auto max-w-full text-center font-sans text-xs break-words text-gray-400 hover:cursor-pointer hover:underline"
+                  className={`pointer-events-auto max-w-full text-center font-sans text-sm break-words text-gray-400 hover:cursor-pointer hover:underline`}
                   onClick={(e) => {
                     e.stopPropagation();
                     setActiveView({
@@ -153,7 +157,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                   exit={{ opacity: 0, transition: { duration: 0.1 } }}
                 >
                   <motion.p
-                    className="pointer-events-auto max-w-full text-center font-sans text-sm break-words text-gray-400 hover:cursor-pointer hover:underline"
+                    className={`text-md pointer-events-auto max-w-full text-center font-sans break-words text-gray-400 hover:cursor-pointer hover:underline`}
                     onClick={(e) => {
                       e.stopPropagation();
                       setActiveView({
@@ -176,7 +180,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                   </motion.span>
 
                   <motion.p
-                    className="text-center font-sans text-sm text-gray-400"
+                    className={`text-md text-center font-sans text-gray-400`}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     style={{ overflow: "hidden" }}
@@ -232,7 +236,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
               }}
               className="pointer-events-auto cursor-pointer rounded-full bg-slate-700 p-1.5 text-gray-300/90 shadow-sm/25 shadow-gray-950 transition-colors hover:bg-slate-700/70 active:bg-slate-700/50"
             >
-              <ZoomIn width={16} height={16} />
+              <ZoomIn width={20} height={20} />
             </motion.button>
           )}
           {showAddRecommendationsButton && (
@@ -264,7 +268,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
               }}
               className="pointer-events-auto cursor-pointer rounded-full bg-slate-700 p-1.5 text-gray-300/90 shadow-sm/25 shadow-gray-950 transition-colors hover:bg-slate-700/70 active:bg-slate-700/50"
             >
-              <GitGraph width={16} height={16} />
+              <GitGraph width={20} height={20} />
             </motion.button>
           )}
         </motion.div>
@@ -306,7 +310,7 @@ const AlbumCardDetailedGenresAndDescriptors = ({ album }: { album: Album }) => {
       >
         {!!album["primary-genres"].length && (
           <div className="flex flex-col gap-2 pr-2">
-            <span className="font-sans text-xs font-semibold text-gray-200">
+            <span className={`font-sans text-sm font-semibold text-gray-200`}>
               Primary Genres
             </span>
             <div
@@ -315,7 +319,7 @@ const AlbumCardDetailedGenresAndDescriptors = ({ album }: { album: Album }) => {
                 borderWidth: 1,
                 backgroundColor: rgbWithOpacity(COLORS.tagsPrimaryGenre, 0.1),
               }}
-              className="rounded-lg p-2 text-xs"
+              className={`rounded-lg p-2 text-sm`}
             >
               {album["primary-genres"].map((genre, index) => (
                 <Fragment key={genre}>
@@ -330,7 +334,7 @@ const AlbumCardDetailedGenresAndDescriptors = ({ album }: { album: Album }) => {
         )}
         {!!album["secondary-genres"].length && (
           <div className="flex flex-col gap-2 pr-2">
-            <span className="font-sans text-xs font-semibold text-gray-200">
+            <span className={`font-sans text-sm font-semibold text-gray-200`}>
               Secondary Genres
             </span>
             <div
@@ -339,7 +343,7 @@ const AlbumCardDetailedGenresAndDescriptors = ({ album }: { album: Album }) => {
                 borderWidth: 1,
                 backgroundColor: rgbWithOpacity(COLORS.tagsSecondaryGenre, 0.1),
               }}
-              className="rounded-lg p-2 text-xs"
+              className={`rounded-lg p-2 text-sm`}
             >
               {album["secondary-genres"].map((genre, index) => (
                 <Fragment key={genre}>
@@ -355,7 +359,7 @@ const AlbumCardDetailedGenresAndDescriptors = ({ album }: { album: Album }) => {
       </motion.div>
       {!!album.descriptors.length && (
         <div className="flex w-full flex-col gap-2">
-          <span className="font-sans text-xs font-semibold text-gray-200">
+          <span className={`font-sans text-sm font-semibold text-gray-200`}>
             Descriptors
           </span>
           <div
@@ -364,7 +368,7 @@ const AlbumCardDetailedGenresAndDescriptors = ({ album }: { album: Album }) => {
               borderWidth: 1,
               backgroundColor: rgbWithOpacity(COLORS.tagsDescriptor, 0.1),
             }}
-            className="rounded-lg p-2 text-xs"
+            className={`rounded-lg p-2 text-sm`}
           >
             {album.descriptors.join(", ")}
           </div>

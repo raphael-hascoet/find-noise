@@ -170,6 +170,7 @@ const AboutModalButton = forwardRef<HTMLDivElement, AboutModalButtonProps>(
                     to find more of what you already like, explore the graph and
                     have a listen !
                   </p>
+                  <hr className="w-1/6 border-gray-300/50" />
                   <div className="flex flex-col gap-1">
                     <p className="text-sm font-bold">Data sources:</p>
                     <ul className="flex list-inside list-disc flex-col gap-1 text-sm text-gray-300">
@@ -230,6 +231,7 @@ const AboutModalButton = forwardRef<HTMLDivElement, AboutModalButtonProps>(
                       RateYourMusic and MusicBrainz !
                     </p>
                   </div>
+                  <hr className="w-1/6 border-gray-300/50" />
                   <p className="text-sm text-gray-300">
                     Inspired by the beautiful{" "}
                     <a
@@ -247,6 +249,17 @@ const AboutModalButton = forwardRef<HTMLDivElement, AboutModalButtonProps>(
                     </a>
                     .
                   </p>
+                  <p className="text-sm text-gray-300">
+                    For more technical details, visit the project's{" "}
+                    <a
+                      href="https://github.com/raphael-hascoet/find-noise"
+                      className="text-violet-400 underline transition-colors hover:text-violet-400/85 active:text-violet-400/70"
+                    >
+                      GitHub repository
+                    </a>
+                    .
+                  </p>
+                  <hr className="w-1/6 border-gray-300/50" />
                   <div className="flex flex-col gap-1">
                     <p className="text-sm text-gray-300">
                       Built by{" "}
