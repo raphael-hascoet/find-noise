@@ -12,6 +12,9 @@ html,
 body {
   height: 100%;
   width: 100%;
+  touch-action: none;
+  -webkit-focus-ring-color: rgba(0, 0, 0, 0);
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
 }
 body {
   margin: 0;
@@ -45,10 +48,14 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.focus-dark-gray-outline {
-  outline-color: transparent;
+.focus-dark-gray-outline:focus {
+  outline: 2px solid var(--color-gray-300);
 }
 
 .focus-dark-gray-outline:focus-visible {
-  outline-color: #4a4a4a;
+  outline: 2px solid var(--color-gray-300);
+}
+
+.focus-violet-outline:focus-visible {
+  outline: 2px solid var(--color-violet-600);
 }

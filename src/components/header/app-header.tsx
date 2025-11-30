@@ -60,7 +60,7 @@ const SearchBar = () => {
       <input
         type="text"
         placeholder="Search..."
-        className="rounded-md border border-zinc-800 bg-zinc-950/75 py-1 pr-10 pl-3 text-zinc-300 focus-visible:outline-violet-600/25"
+        className="focus-violet-outline rounded-md border border-zinc-800 bg-zinc-950/75 py-1 pr-10 pl-3 text-zinc-300"
         onChange={handleInputChange}
         value={inputValue}
       />
