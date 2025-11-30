@@ -11,6 +11,7 @@ import {
   type PositionedNode,
 } from "../views/views-config";
 import { AlbumCardNodeContent } from "./content/album-card-node-content";
+import { AppTitleNodeContent } from "./content/app-title-content";
 import { ArtistCardNodeContent } from "./content/artist-card-node-content";
 import { IconButtonNodeContent } from "./content/icon-button-node-content";
 import { SectionTitleNodeContent } from "./content/section-title-node-content";
@@ -30,6 +31,7 @@ export const ViewNode = ({ node, propagateEvent }: ViewNodeProps) => {
       width={node.dimensions.width}
       height={node.dimensions.height}
       nodeId={node.nodeDef.id}
+      appearanceDelay={node.nodeDef.appearanceDelay}
       propagateEvent={propagateEvent}
     >
       <ViewNodeContent hasPosition={true} nodeDef={node.nodeDef} />
@@ -44,6 +46,7 @@ function NodeMotion({
   width,
   height,
   propagateEvent,
+  appearanceDelay,
 }: {
   left: number;
   top: number;
@@ -52,6 +55,7 @@ function NodeMotion({
   children: React.ReactNode;
   nodeId: string;
   propagateEvent: PropagateEvent;
+  appearanceDelay?: number;
 }) {
   const nodeRef = useRef<HTMLDivElement | null>(null);
 
@@ -86,8 +90,8 @@ function NodeMotion({
       x.set(dx);
       y.set(dy);
       frame.render(() => {
-        animate(x, 0, { duration: 0.6, ease: [0.22, 1, 0.36, 1] });
-        animate(y, 0, { duration: 0.6, ease: [0.22, 1, 0.36, 1] });
+        animate(x, 0, { duration: 0.9, ease: [0.22, 1, 0.36, 1] });
+        animate(y, 0, { duration: 0.9, ease: [0.22, 1, 0.36, 1] });
       });
       prev.current = { left, top: anchoredTop, height };
     }
@@ -97,14 +101,14 @@ function NodeMotion({
     frame.render(() => {
       animate(heightMotion, height, {
         ease: [0.22, 1, 0.36, 1],
-        duration: 0.6,
+        duration: 1,
       });
     });
   }, [height, heightMotion]);
 
   useEffect(() => {
     frame.render(() => {
-      animate(widthMotion, width, { ease: [0.22, 1, 0.36, 1], duration: 0.6 });
+      animate(widthMotion, width, { ease: [0.22, 1, 0.36, 1], duration: 1 });
     });
   }, [width, widthMotion]);
 
@@ -112,11 +116,15 @@ function NodeMotion({
     <motion.div
       ref={nodeRef}
       initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0, transition: { duration: 0.3 } }}
-      transition={{
-        opacity: { duration: 0.6, ease: "easeOut" },
+      animate={{
+        opacity: 1,
+        transition: {
+          delay: appearanceDelay ?? 0,
+          duration: 0.8,
+          ease: "easeOut",
+        },
       }}
+      exit={{ opacity: 0, transition: { duration: 0.3, ease: "easeOut" } }}
       style={{
         position: "absolute",
         left: left,
@@ -186,6 +194,15 @@ export const ViewNodeContent = ({
       return (
         <IconButtonNodeContent
           context={contextWithBackup.data}
+          nodeId={nodeDef.id}
+          positioned={hasPosition}
+          updateTriggeredAt={updateTriggeredAt}
+        />
+      );
+
+    case "app-title":
+      return (
+        <AppTitleNodeContent
           nodeId={nodeDef.id}
           positioned={hasPosition}
           updateTriggeredAt={updateTriggeredAt}

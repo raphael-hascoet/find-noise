@@ -19,7 +19,7 @@ export const zoomConstantsAtom = atom<ZoomConstants>((get) => {
         maxZoom: 2,
       }
     : {
-        zoomPaddingX: 25,
+        zoomPaddingX: 30,
         zoomPaddingY: 85,
         minZoom: 0.2,
         maxZoom: 1.5,

@@ -1,3 +1,3 @@
 export const getAlbumCoverUrl = (mbid: string): string => {
-  return `https://coverartarchive.org/release/${mbid}/front-250.jpg`;
+  return `https://find-noise-images.pages.dev/albums/${mbid}.webp`;
 };

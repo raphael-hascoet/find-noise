@@ -1,4 +1,3 @@
-import clsx from "clsx";
 import { useAtomValue, useSetAtom } from "jotai";
 import { GitGraph, ZoomIn } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -44,9 +43,7 @@ export type AlbumCardParentView =
 type AlbumCardContentOptions = {
   showArtistName: boolean;
   showAddRecommendationsButton: boolean;
-  showReleaseYear: boolean;
   showZoomInButton: boolean;
-  showDetailedGenresAndDescriptors: boolean;
 };
 
 export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
@@ -67,17 +64,12 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
 
   const { parentView, variant = "compact" } = context.data;
 
-  const {
-    showArtistName,
-    showAddRecommendationsButton,
-    showReleaseYear,
-    showZoomInButton,
-    showDetailedGenresAndDescriptors,
-  } = useContentOptionsForAlbumCard({
-    parentView,
-    variant,
-    hasChildren: graphNodeProps.hasChildren,
-  });
+  const { showArtistName, showAddRecommendationsButton, showZoomInButton } =
+    useContentOptionsForAlbumCard({
+      parentView,
+      variant,
+      hasChildren: graphNodeProps.hasChildren,
+    });
 
   return (
     <NodeContentWrapper {...graphNodeProps} variant={variant}>
@@ -90,10 +82,12 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
             compact: {
               width: "8rem",
               maxWidth: "8rem",
+              padding: "0",
             },
             detailed: {
               width: "24rem",
               maxWidth: "24rem",
+              padding: "0.125rem",
             },
           }}
         >
@@ -125,16 +119,41 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
               >
                 {album ? album.release : "Unknown Album"}
               </motion.p>
-              <div
-                className={`flex items-center gap-1 ${clsx({ "flex-col": variant === "compact", "flex-row": variant === "detailed" })}`}
-              >
-                {showArtistName && (
+              {parentView === "albumsForArtist" && (
+                <p className="text-center font-sans text-xs text-gray-400">
+                  {album
+                    ? album["release-date"].split("-")[0]
+                    : "Unknown Release Date"}
+                </p>
+              )}
+              {showArtistName && variant === "compact" && (
+                <motion.p
+                  className="pointer-events-auto max-w-full text-center font-sans text-xs break-words text-gray-400 hover:cursor-pointer hover:underline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveView({
+                      key: "albumsForArtist",
+                      data: {
+                        artistId: album?.["artist-mbid"],
+                      },
+                    });
+                  }}
+                >
+                  {album ? album.artist : "Unknown Artist"}
+                </motion.p>
+              )}
+              {variant === "detailed" && (
+                <motion.div
+                  className={`flex flex-row items-center gap-1`}
+                  initial={{ opacity: 0 }}
+                  animate={{
+                    opacity: 1,
+                    transition: { delay: 0.3, duration: 0.3 },
+                  }}
+                  exit={{ opacity: 0, transition: { duration: 0.1 } }}
+                >
                   <motion.p
-                    className="pointer-events-auto max-w-full text-center font-sans break-words text-gray-400 hover:cursor-pointer hover:underline"
-                    variants={{
-                      compact: { fontSize: "var(--text-xs)" },
-                      detailed: { fontSize: "var(--text-sm)" },
-                    }}
+                    className="pointer-events-auto max-w-full text-center font-sans text-sm break-words text-gray-400 hover:cursor-pointer hover:underline"
                     onClick={(e) => {
                       e.stopPropagation();
                       setActiveView({
@@ -147,26 +166,15 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                   >
                     {album ? album.artist : "Unknown Artist"}
                   </motion.p>
-                )}
-                {variant === "detailed" &&
-                  showArtistName &&
-                  showReleaseYear && (
-                    <motion.span
-                      className="text-gray-500"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                    >
-                      -
-                    </motion.span>
-                  )}
-                {variant === "compact" && showReleaseYear && (
-                  <p className="text-center font-sans text-xs text-gray-400">
-                    {album
-                      ? album["release-date"].split("-")[0]
-                      : "Unknown Release Date"}
-                  </p>
-                )}
-                {variant === "detailed" && showReleaseYear && (
+
+                  <motion.span
+                    className="text-gray-500"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    -
+                  </motion.span>
+
                   <motion.p
                     className="text-center font-sans text-sm text-gray-400"
                     initial={{ opacity: 0 }}
@@ -177,12 +185,12 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                       ? album["release-date"].split("-")[0]
                       : "Unknown Release Date"}
                   </motion.p>
-                )}
-              </div>
+                </motion.div>
+              )}
             </div>
           </div>
           <AnimatePresence>
-            {showDetailedGenresAndDescriptors && (
+            {variant === "detailed" && (
               <motion.div
                 className="flex flex-col items-center gap-2"
                 initial="hidden"
@@ -192,9 +200,8 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                   hidden: { opacity: 0 },
                   show: {
                     opacity: 1,
-                    transition: { delay: 0.3, duration: 0.3 },
+                    transition: { delay: 0.7, duration: 0.3 },
                   },
-                  hide: { opacity: 0, transition: { duration: 0.1 } },
                 }}
                 style={{ overflow: "hidden" }}
               >
@@ -204,7 +211,12 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
           </AnimatePresence>
 
           {showZoomInButton && (
-            <button
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{
+                opacity: 1,
+                transition: { delay: 0.5, duration: 0.3 },
+              }}
               onClick={(e) => {
                 e.stopPropagation();
                 if (parentView === "flowchart") {
@@ -221,10 +233,15 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
               className="pointer-events-auto cursor-pointer rounded-full bg-slate-700 p-1.5 text-gray-300/90 shadow-sm/25 shadow-gray-950 transition-colors hover:bg-slate-700/70 active:bg-slate-700/50"
             >
               <ZoomIn width={16} height={16} />
-            </button>
+            </motion.button>
           )}
           {showAddRecommendationsButton && (
-            <button
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{
+                opacity: 1,
+                transition: { delay: 0.5, duration: 0.3 },
+              }}
               onClick={(e) => {
                 e.stopPropagation();
                 addRecommendationsToNode?.({
@@ -248,7 +265,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
               className="pointer-events-auto cursor-pointer rounded-full bg-slate-700 p-1.5 text-gray-300/90 shadow-sm/25 shadow-gray-950 transition-colors hover:bg-slate-700/70 active:bg-slate-700/50"
             >
               <GitGraph width={16} height={16} />
-            </button>
+            </motion.button>
           )}
         </motion.div>
       </NodeCard>
@@ -268,13 +285,11 @@ const useContentOptionsForAlbumCard = ({
   const options: AlbumCardContentOptions = {
     showArtistName: variant === "detailed" || parentView !== "albumsForArtist",
     showAddRecommendationsButton: parentView === "flowchart" && !hasChildren,
-    showReleaseYear: variant === "detailed" || parentView === "albumsForArtist",
     showZoomInButton:
       parentView === "home" ||
       parentView === "search" ||
       parentView === "albumsForArtist" ||
       variant === "compact",
-    showDetailedGenresAndDescriptors: variant === "detailed",
   };
 
   return options;

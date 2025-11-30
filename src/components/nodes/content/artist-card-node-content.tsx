@@ -1,6 +1,5 @@
 import { memo } from "react";
 import type { ArtistContext } from "../view-nodes-manager";
-import { NodeCard } from "./node-card";
 import {
   NodeContentWrapper,
   type NodeContentWrapperPropsBase,
@@ -16,11 +15,13 @@ export const ArtistCardNodeContent = memo(function ArtistCardNodeContent({
 }: ArtistCardProps) {
   return (
     <NodeContentWrapper {...graphNodeProps}>
-      <NodeCard>
-        <span className="text-center font-sans text-sm text-gray-300">
+      <div
+        className={`flex items-center justify-center rounded-xl border-2 border-gray-800 bg-violet-950 px-3 py-2`}
+      >
+        <span className="text-center font-sans text-sm font-bold text-gray-300">
           {context.data.name}
         </span>
-      </NodeCard>
+      </div>
     </NodeContentWrapper>
   );
 });

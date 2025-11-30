@@ -65,7 +65,7 @@ export const albumsForArtistView: Atom<ViewBuilder<"albumsForArtist">> = atom(
           x: artistDimensions.width / 2,
           y: artistDimensions.height / 2,
         });
-        nextY += artistDimensions.height + Y_GAP;
+        nextY += artistDimensions.height + 20;
       }
 
       const albumsDimensions = albums
