@@ -148,7 +148,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                   initial={{ opacity: 0 }}
                   animate={{
                     opacity: 1,
-                    transition: { delay: 0.2, duration: 0.3 },
+                    transition: { delay: 0.3, duration: 0.3 },
                   }}
                   exit={{ opacity: 0, transition: { duration: 0.1 } }}
                 >
@@ -200,7 +200,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                   hidden: { opacity: 0 },
                   show: {
                     opacity: 1,
-                    transition: { delay: 0.5, duration: 0.3 },
+                    transition: { delay: 0.7, duration: 0.3 },
                   },
                 }}
                 style={{ overflow: "hidden" }}

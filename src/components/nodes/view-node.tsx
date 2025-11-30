@@ -90,8 +90,8 @@ function NodeMotion({
       x.set(dx);
       y.set(dy);
       frame.render(() => {
-        animate(x, 0, { duration: 0.8, ease: [0.22, 1, 0.36, 1] });
-        animate(y, 0, { duration: 0.8, ease: [0.22, 1, 0.36, 1] });
+        animate(x, 0, { duration: 0.9, ease: [0.22, 1, 0.36, 1] });
+        animate(y, 0, { duration: 0.9, ease: [0.22, 1, 0.36, 1] });
       });
       prev.current = { left, top: anchoredTop, height };
     }
@@ -101,14 +101,14 @@ function NodeMotion({
     frame.render(() => {
       animate(heightMotion, height, {
         ease: [0.22, 1, 0.36, 1],
-        duration: 0.8,
+        duration: 1,
       });
     });
   }, [height, heightMotion]);
 
   useEffect(() => {
     frame.render(() => {
-      animate(widthMotion, width, { ease: [0.22, 1, 0.36, 1], duration: 0.8 });
+      animate(widthMotion, width, { ease: [0.22, 1, 0.36, 1], duration: 1 });
     });
   }, [width, widthMotion]);
 
