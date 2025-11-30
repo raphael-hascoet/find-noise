@@ -174,7 +174,23 @@ export const useZoomManager = ({
         if (!extentBounds) return;
         updateExtentBounds({ scale: minScaleExtentRef.current, extentBounds });
 
-        if (pendingStatus === "rezooming-pending") {
+        const currentTransform = new d3.ZoomTransform(
+          tk.get(),
+          tx.get(),
+          ty.get(),
+        );
+
+        const isCurrentTransformInsideExtent = isTransformInsideExtent(
+          currentTransform,
+          svgRef.current?.clientWidth || 0,
+          svgRef.current?.clientHeight || 0,
+          extentBounds,
+        );
+
+        if (
+          pendingStatus === "rezooming-pending" ||
+          !isCurrentTransformInsideExtent
+        ) {
           const zoomRoot = d3.select(
             (svgRef as RefObject<SVGSVGElement>).current,
           );
@@ -334,6 +350,24 @@ export const useZoomManager = ({
       }, 200),
     [createExtentBounds, updateExtentBounds],
   );
+
+  const isTransformInsideExtent = (
+    t: d3.ZoomTransform,
+    svgWidth: number,
+    svgHeight: number,
+    extentBounds: ExtentBounds,
+  ) => {
+    if (!d3ZoomRef.current) return true;
+    const clamped = d3ZoomRef.current.constrain()(
+      t,
+      [
+        [0, 0],
+        [svgWidth, svgHeight],
+      ],
+      extentBounds,
+    );
+    return nearTransform(t, clamped, 1);
+  };
 
   useEffect(() => {
     const handleResize = () => {
