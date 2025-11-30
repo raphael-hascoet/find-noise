@@ -169,7 +169,7 @@ const AboutModalButton = forwardRef<HTMLDivElement, AboutModalButtonProps>(
                   to find more of what you already like, explore the graph and
                   have a listen !
                 </p>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1">
                   <p className="text-sm font-bold">Data sources:</p>
                   <ul className="flex list-inside list-disc flex-col gap-1 text-sm text-gray-300">
                     <li>
@@ -243,7 +243,9 @@ const AboutModalButton = forwardRef<HTMLDivElement, AboutModalButtonProps>(
                   >
                     community flowcharts
                   </a>
+                  .
                 </p>
+
                 <div className="flex flex-col gap-1">
                   <p className="text-sm text-gray-300">
                     Built by <span className="font-bold">Raphaël Hascoët</span>
@@ -265,7 +267,14 @@ const AboutModalButton = forwardRef<HTMLDivElement, AboutModalButtonProps>(
                     </a>
                   </p>
                 </div>
-
+                <div className="flex flex-col gap-1">
+                  <p className="text-xs text-gray-300/80">
+                    All images are copyrighted by their respective owners and
+                    used for educational and informational purposes only. If you
+                    believe that any content on this site infringes your
+                    copyright, please contact the address above.
+                  </p>
+                </div>
                 <button
                   className="cursor-pointer rounded-md bg-violet-700 px-4 py-1 text-sm text-white transition-colors hover:bg-violet-700/85 active:bg-violet-700/70"
                   onClick={(e) => {
