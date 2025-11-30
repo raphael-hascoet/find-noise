@@ -1,73 +1,45 @@
-# React + TypeScript + Vite
+# Find Noise
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A music discovery application that visualizes album relationships through interactive flowcharts and generates recommendations based on genre and descriptor overlap.
 
-Currently, two official plugins are available:
+[Live App](DEPLOYMENT_URL_PLACEHOLDER)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
 
-## React Compiler
+- **Flowchart Navigation**: Interactive node-based visualization connecting albums by genre and style relationships
+- **Album Suggestions**: Generates recommendations using genre overlap, shared descriptors, and rating analysis
+- **Dynamic Visualization**: Zoom/pan controls with dynamic positioning and album artwork integration
+- **Fuzzy Search**: Allows approximate matching for album and artist names, helping users find albums that they want to use in the flowchart
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Technical Approach
 
-## Expanding the ESLint configuration
+A dataset of the top 5,000 most-reviewed albums from RateYourMusic is combined with MusicBrainz and Cover Art Archive APIs to link album metadata with artwork, enabling the matching of recommendation logic with fitting visuals. It is small enough to be served statically as a JSONL file.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+The visualization layer uses [D3.js](https://d3js.org/d3-zoom) for custom zoom management with dynamic bounds calculation, smooth controls and SVG handling, while [Motion](https://motion.dev/) (prev. Framer Motion) handles UI animations and component transitions. The recommendation logic analyzes genre overlap (primary/secondary), shared descriptors, and rating values to suggest relevant albums.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+State management through [Jotai](https://jotai.org/) optimizes performance by controlling data instantiation and selective updates across different views (home, search, artist catalogs, detailed flowcharts), preventing unnecessary re-renders when switching between large datasets.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+The cover art images for relevant albums are mirrored through [Cloudflare Pages](https://pages.cloudflare.com/), reducing the load on the Cover Art Archive API while providing increased network performance through caching and Cloudflare's CDN.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Data Sources
+
+- [RateYourMusic Top 5,000 Albums](https://www.kaggle.com/datasets/tobennao/rym-top-5000) - provides album metadata, genres, and descriptors
+- [MusicBrainz](https://musicbrainz.org/) and [Cover Art Archive](https://coverartarchive.org/) - album artwork integration
+
+_Note: [RateYourMusic](https://rateyourmusic.com/) data is from **2022** and cannot currently be updated. The [Sonemic API project](https://sonemic.com/) aims to make this data more accessible in the future._
+
+All data and images are copyrighted by their respective owners and used for educational and informational purposes only. If you believe that any content on this site infringes your copyright, please contact the address below.
+
+## Development
+
+You can clone and run the app yourself with [pnpm](https://pnpm.io/) through those commands:
+
+```bash
+pnpm install
+pnpm dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Contact
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Built by **Raphaël Hascoët**  
+[LinkedIn](https://www.linkedin.com/in/raphael-hascoet) • raphael.hascoet.pro@gmail.com

@@ -211,17 +211,18 @@ const AboutModalButton = forwardRef<HTMLDivElement, AboutModalButtonProps>(
                 <div className="flex flex-col gap-2">
                   <p className="text-sm text-gray-300">
                     <span className="font-bold">
-                      Note that the RateYourMusic data was scrapped in 2022, and
-                      it is currently not possible to get updated data
-                    </span>{" "}
-                    because of added scrapping protections on the website. The{" "}
+                      Note that the RateYourMusic data dates from 2022 and
+                      cannot currently be updated.
+                    </span>
+                    . The{" "}
                     <a
                       className="text-violet-400 underline transition-colors hover:text-violet-400/85 active:text-violet-400/70"
                       href="https://sonemic.com/"
                     >
                       Sonemic API project
                     </a>{" "}
-                    is underway to make that data more easily accessible.
+                    is underway to make this data more easily accessible in the
+                    future.
                   </p>
                   <p className="text-sm text-gray-300">
                     If you like this project, consider supporting RateYourMusic
@@ -269,10 +270,10 @@ const AboutModalButton = forwardRef<HTMLDivElement, AboutModalButtonProps>(
                 </div>
                 <div className="flex flex-col gap-1">
                   <p className="text-xs text-gray-300/80">
-                    All images are copyrighted by their respective owners and
-                    used for educational and informational purposes only. If you
-                    believe that any content on this site infringes your
-                    copyright, please contact the address above.
+                    All data and images are copyrighted by their respective
+                    owners and used for educational and informational purposes
+                    only. If you believe that any content on this site infringes
+                    your copyright, please contact the address above.
                   </p>
                 </div>
                 <button
