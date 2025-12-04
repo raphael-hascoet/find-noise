@@ -34,7 +34,13 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 
 const MOVE_DURATION = 0.6;
 
-export const TagCloud = ({ lineDef }: { lineDef: LinkLineDefWithTags }) => {
+export const TagCloud = ({
+  lineDef,
+  isReappearing,
+}: {
+  lineDef: LinkLineDefWithTags;
+  isReappearing?: boolean;
+}) => {
   const calculatedFontSizesRef = useRef<
     Map<TagSidePosition, { fontSize: number; length: number }>
   >(new Map());
@@ -111,9 +117,10 @@ export const TagCloud = ({ lineDef }: { lineDef: LinkLineDefWithTags }) => {
         fontSize: calculatedFontSizesDone.get(id)!.fontSize,
         tag: tag,
         id,
+        isReappearing,
       }),
     );
-  }, [shellTagProps, calculatedFontSizesDone]);
+  }, [shellTagProps, calculatedFontSizesDone, isReappearing]);
 
   if (!tagProps) {
     return (
@@ -211,9 +218,15 @@ type FloatingTagProps = {
   fontSize: number;
   tag: TagDef;
   id: TagSidePosition;
+  isReappearing?: boolean;
 };
 
-const FloatingTag = ({ basePos, tag, fontSize }: FloatingTagProps) => {
+const FloatingTag = ({
+  basePos,
+  tag,
+  fontSize,
+  isReappearing,
+}: FloatingTagProps) => {
   const x = useMotionValue(basePos.x);
   const y = useMotionValue(basePos.y);
 
@@ -226,7 +239,7 @@ const FloatingTag = ({ basePos, tag, fontSize }: FloatingTagProps) => {
 
   return (
     <motion.g
-      initial={{ opacity: 0 }}
+      initial={isReappearing ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
       style={{ willChange: "transform", x, y }}
       transition={{
@@ -236,38 +249,9 @@ const FloatingTag = ({ basePos, tag, fontSize }: FloatingTagProps) => {
         },
       }}
     >
-      <text
-        x={0}
-        y={0}
-        fill={tag.color}
-        fontSize={fontSize}
-        cursor="default"
-        filter={`url(#shadow-${tag.label.replace(/\s+/g, "-")})`}
-      >
+      <text x={0} y={0} fill={tag.color} fontSize={fontSize} cursor="default">
         {tag.label}
       </text>
-      <filter
-        id={`shadow-${tag.label.replace(/\s+/g, "-")}`}
-        x="-60%"
-        y="-60%"
-        width="220%"
-        height="220%"
-        filterUnits="objectBoundingBox"
-      >
-        <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur" />
-        <feFlood floodColor={tag.color} floodOpacity="0.5" result="color" />
-        <feOffset in="blur" dx={0} dy={0} result="offsetBlur" />
-        <feComposite
-          in="color"
-          in2="offsetBlur"
-          operator="in"
-          result="coloredBlur"
-        />
-        <feMerge>
-          <feMergeNode in="coloredBlur" />
-          <feMergeNode in="SourceGraphic" />
-        </feMerge>
-      </filter>
     </motion.g>
   );
 };

@@ -1,7 +1,7 @@
 import { useAtomValue } from "jotai";
 import { animate, frame } from "motion";
 import { motion, useMotionValue, useTransform } from "motion/react";
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { memo, useEffect, useLayoutEffect, useRef } from "react";
 import {
   useD3ZoomPropagationProps,
   type PropagateEvent,
@@ -20,9 +20,14 @@ import type { ViewNodeDef } from "./view-nodes-manager";
 export type ViewNodeProps = {
   node: PositionedNode;
   propagateEvent: PropagateEvent;
+  isReappearing?: boolean;
 };
 
-export const ViewNode = ({ node, propagateEvent }: ViewNodeProps) => {
+export const ViewNode = memo(function ViewNode({
+  node,
+  propagateEvent,
+  isReappearing,
+}: ViewNodeProps) {
   return (
     <NodeMotion
       key={node.nodeDef.id}
@@ -33,11 +38,16 @@ export const ViewNode = ({ node, propagateEvent }: ViewNodeProps) => {
       nodeId={node.nodeDef.id}
       appearanceDelay={node.nodeDef.appearanceDelay}
       propagateEvent={propagateEvent}
+      isReappearing={isReappearing}
     >
-      <ViewNodeContent hasPosition={true} nodeDef={node.nodeDef} />
+      <ViewNodeContent
+        hasPosition={true}
+        nodeDef={node.nodeDef}
+        isReappearing={isReappearing}
+      />
     </NodeMotion>
   );
-};
+});
 
 function NodeMotion({
   left,
@@ -47,6 +57,7 @@ function NodeMotion({
   height,
   propagateEvent,
   appearanceDelay,
+  isReappearing = false,
 }: {
   left: number;
   top: number;
@@ -56,6 +67,7 @@ function NodeMotion({
   nodeId: string;
   propagateEvent: PropagateEvent;
   appearanceDelay?: number;
+  isReappearing?: boolean;
 }) {
   const nodeRef = useRef<HTMLDivElement | null>(null);
 
@@ -108,14 +120,17 @@ function NodeMotion({
 
   useEffect(() => {
     frame.render(() => {
-      animate(widthMotion, width, { ease: [0.22, 1, 0.36, 1], duration: 0.8 });
+      animate(widthMotion, width, {
+        ease: [0.22, 1, 0.36, 1],
+        duration: 0.8,
+      });
     });
   }, [width, widthMotion]);
 
   return (
     <motion.div
       ref={nodeRef}
-      initial={{ opacity: 0 }}
+      initial={isReappearing ? false : { opacity: 0 }}
       animate={{
         opacity: 1,
         transition: {
@@ -127,7 +142,7 @@ function NodeMotion({
       exit={{ opacity: 0, transition: { duration: 0.3, ease: "easeOut" } }}
       style={{
         position: "absolute",
-        left: left,
+        left,
         top: anchoredTop,
         width: widthMotion,
         height: heightMotion,
@@ -147,12 +162,14 @@ export type ViewNodeContentProps = {
   hasPosition: boolean;
   nodeDef: ViewNodeDef;
   updateTriggeredAt?: string;
+  isReappearing?: boolean;
 };
 
 export const ViewNodeContent = ({
   hasPosition,
   nodeDef,
   updateTriggeredAt,
+  isReappearing = false,
 }: ViewNodeContentProps) => {
   const transitioningNode = useAtomValue(transitioningNodesFamily(nodeDef.id));
   const contextWithBackup =
@@ -174,6 +191,7 @@ export const ViewNodeContent = ({
           nodeId={nodeDef.id}
           positioned={hasPosition}
           updateTriggeredAt={updateTriggeredAt}
+          isReappearing={isReappearing}
           context={contextWithBackup}
           hasChildren={
             !!nodeDef?.children?.length && nodeDef.children.length > 0

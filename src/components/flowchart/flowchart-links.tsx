@@ -1,11 +1,18 @@
 import { atom, useAtomValue } from "jotai";
 import { animate, frame, motion, useMotionValue } from "motion/react";
-import { Fragment, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  memo,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { COLORS } from "../../constants/colors";
 import type { PositionedNode } from "../views/views-config";
 import { getTagsFromReasoning, TagCloud, type TagDef } from "./flowchart-tags";
 
-type Link = {
+export type Link = {
   source: string;
   targets: string[];
 };
@@ -34,54 +41,79 @@ type LinkEndpoints = {
   }[];
 };
 
-export const FlowchartLinks = ({
-  links,
-  positionedNodes,
-}: {
-  links: Link[];
-  positionedNodes: Map<string, PositionedNode>;
-}) => {
-  if (!positionedNodes.size) return null;
+export const FlowchartLinks = memo(
+  function FlowchartLinks({
+    positionedNodes,
+    reappearingLinkIds,
+    windowedLinks,
+  }: {
+    positionedNodes: Map<string, PositionedNode>;
+    reappearingLinkIds?: Set<string>;
+    windowedLinks: Link[];
+  }) {
+    if (!positionedNodes.size) return null;
 
-  return (
-    <>
-      {links.map((link) => {
-        const sourceNode = positionedNodes.get(link.source);
+    return (
+      <>
+        {windowedLinks.map((link) => {
+          const sourceNode = positionedNodes.get(link.source);
 
-        if (!sourceNode || !link.targets?.length) {
-          return null;
-        }
+          if (!sourceNode || !link.targets?.length) {
+            return null;
+          }
 
-        const targets = link.targets
-          .map((nodeId) => {
-            const targetNode = positionedNodes.get(nodeId);
+          const targets = link.targets
+            .map((nodeId) => {
+              const targetNode = positionedNodes.get(nodeId);
 
-            if (!targetNode) {
-              console.warn("Missing positioned node for target:", nodeId);
-              return null;
-            }
+              if (!targetNode) {
+                console.warn("Missing positioned node for target:", nodeId);
+                return null;
+              }
 
-            return targetNode;
-          })
-          .filter((link) => !!link);
+              return targetNode;
+            })
+            .filter((link) => !!link);
 
-        if (!targets.length) return null;
+          if (!targets.length) return null;
 
-        const endpoints = calculateLinkEndpoints({
-          source: sourceNode,
-          targets,
-        });
+          const endpoints = calculateLinkEndpoints({
+            source: sourceNode,
+            targets,
+          });
 
-        return (
-          <AnimatedLink
-            key={`${link.source}-${link.targets.join("_")}`}
-            {...endpoints}
-          />
-        );
-      })}
-    </>
-  );
-};
+          const linkId = `${link.source}-${link.targets.join("_")}`;
+          const isReappearing = reappearingLinkIds?.has(linkId) ?? false;
+
+          return (
+            <AnimatedLink
+              key={linkId}
+              {...endpoints}
+              isReappearing={isReappearing}
+            />
+          );
+        })}
+      </>
+    );
+  },
+  (prevProps, nextProps) => {
+    const prevLinkIds = prevProps.windowedLinks.map(
+      (link) => `${link.source}-${link.targets.join("_")}`,
+    );
+    const nextLinkIds = nextProps.windowedLinks.map(
+      (link) => `${link.source}-${link.targets.join("_")}`,
+    );
+
+    return (
+      prevProps.positionedNodes === nextProps.positionedNodes &&
+      [...(prevProps.reappearingLinkIds?.keys() ?? [])].every((key) =>
+        nextProps.reappearingLinkIds?.has(key),
+      ) &&
+      prevLinkIds.every((id) => nextLinkIds.includes(id)) &&
+      nextLinkIds.every((id) => prevLinkIds.includes(id))
+    );
+  },
+);
 
 const seenSegmentsAtom = atom<Set<string>>(new Set<string>());
 
@@ -90,7 +122,10 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 const REVEAL_DURATION = 0.3;
 const MOVE_DURATION = 0.6;
 
-function AnimatedLink({ drawOrderedLines }: LinkEndpoints) {
+const AnimatedLink = memo(function AnimatedLink({
+  drawOrderedLines,
+  isReappearing,
+}: LinkEndpoints & { isReappearing: boolean }) {
   const items = useMemo(
     () =>
       drawOrderedLines.flatMap((g, gIdx) =>
@@ -158,13 +193,16 @@ function AnimatedLink({ drawOrderedLines }: LinkEndpoints) {
             revealDuration={REVEAL_DURATION}
             ease={EASE as [number, number, number, number]}
             gIdx={gIdx}
+            isReappearing={isReappearing}
           />
-          {isLinkLineDefWithTags(seg) && <TagCloud lineDef={seg} />}
+          {isLinkLineDefWithTags(seg) && (
+            <TagCloud lineDef={seg} isReappearing={isReappearing} />
+          )}
         </Fragment>
       ))}
     </>
   );
-}
+});
 
 function AnimatedSegment({
   seg,
@@ -174,6 +212,7 @@ function AnimatedSegment({
   revealDuration,
   ease,
   gIdx,
+  isReappearing,
 }: {
   seg: LinkLineDef;
   canReveal: boolean;
@@ -182,6 +221,7 @@ function AnimatedSegment({
   revealDuration: number;
   gIdx: number;
   ease: [number, number, number, number];
+  isReappearing: boolean;
 }) {
   const x1 = useMotionValue(seg.start.x);
   const y1 = useMotionValue(seg.start.y);
@@ -223,7 +263,7 @@ function AnimatedSegment({
       strokeLinecap="round"
       markerEnd={seg.isArrow ? "url(#link-arrow)" : undefined}
       style={{ pointerEvents: "none" }}
-      initial={{ pathLength: 0, opacity: 0 }}
+      initial={isReappearing ? false : { pathLength: 0, opacity: 0 }}
       animate={{ pathLength: canReveal ? 1 : 0, opacity: canReveal ? 0.8 : 0 }}
       transition={{
         opacity: {
@@ -265,7 +305,9 @@ const calculateLinkEndpoints = ({
     y: sourceBottomY + gap,
   };
 
-  const targetMinY = Math.min(...targets.map((t) => t.position.y - t.dimensions.height / 2));
+  const targetMinY = Math.min(
+    ...targets.map((t) => t.position.y - t.dimensions.height / 2),
+  );
 
   const distanceBetweenSourceAndTarget = targetMinY - sourceBottomY;
 
@@ -276,7 +318,8 @@ const calculateLinkEndpoints = ({
 
   const leftConnectionLineExtremityX = leftToRightTargets[0].position.x;
 
-  const rightConnectionLineExtremityX = leftToRightTargets[leftToRightTargets.length - 1].position.x;
+  const rightConnectionLineExtremityX =
+    leftToRightTargets[leftToRightTargets.length - 1].position.x;
 
   const sourceToConnectionLine: LinkLineDef = {
     start: rootPos,

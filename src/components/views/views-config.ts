@@ -107,8 +107,8 @@ export const nodePositioningStateAtom = atom((get): NodePositioningState => {
 
   console.log({ dimensions });
 
-  let areAllNodeDefsDimensionsLoaded = true;
   const nodeDefsWithDimensions = new Map<string, NodeDefWithDimensions>();
+  const nodeDefsNeedingDimensions = new Map<string, ViewNodeDef>();
 
   for (const [id, nodeDef] of nodeDefs) {
     let dimensionKey = id;
@@ -120,19 +120,19 @@ export const nodePositioningStateAtom = atom((get): NodePositioningState => {
     const nodeDimensions = dimensions.get(dimensionKey);
     if (!nodeDimensions || nodeDimensions.updateRequested) {
       console.log("not loaded", { nodeDimensions, nodeDefs });
-      areAllNodeDefsDimensionsLoaded = false;
-      break;
+      nodeDefsNeedingDimensions.set(id, nodeDef);
+      continue;
     }
     nodeDefsWithDimensions.set(id, { dimensions: nodeDimensions, nodeDef });
   }
 
-  if (!areAllNodeDefsDimensionsLoaded) {
+  if (nodeDefsNeedingDimensions.size > 0) {
     const transitionNodes = get(transitioningNodesAtom);
 
     return {
       state: "in-progress",
       transitionNodes,
-      targetNodeDefs: nodeDefs,
+      targetNodeDefs: nodeDefsNeedingDimensions,
       triggeredAt: new Date().toISOString(),
     };
   }

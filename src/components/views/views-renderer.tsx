@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type RefObject,
@@ -18,12 +19,12 @@ import { AboutButton } from "../footer/about-button";
 import { ViewNode, ViewNodeContent } from "../nodes/view-node";
 import { useZoomManager } from "../zoom-manager";
 import {
-  calculatedLinksAtom,
   clearTransitioningNodesAtom,
   nodePositioningStateAtom,
   setActiveViewAtom,
   type NodePositioningState,
 } from "./views-config";
+import { useWindowedNodes } from "./windowing-manager";
 
 type ViewsRendererProps = {
   positioningState: NodePositioningState;
@@ -57,10 +58,10 @@ const ViewsRendererContent = function ({
   const svgRef = useRef<SVGSVGElement>(null);
   const rendererRef = useRef<D3SvgRenderer | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const d3ZoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown>>(null);
 
   const [zoomIsInitialized, setZoomIsInitialized] = useState(false);
-
-  const links = useAtomValue(calculatedLinksAtom);
+  const [viewportChangeTrigger, setViewportChangeTrigger] = useState(0);
 
   const clearTransitionNodes = useSetAtom(clearTransitioningNodesAtom);
 
@@ -74,18 +75,35 @@ const ViewsRendererContent = function ({
     }
   }, [COLORS]);
 
-  const { overlayTransform, onZoom } = useZoomManager({
+  const { overlayTransform, onZoom, subscribeToViewportChanges } =
+    useZoomManager({
+      svgRef,
+      zoomIsInitialized,
+      onZoomInitialized: () => setZoomIsInitialized(true),
+      d3ZoomRef,
+    });
+
+  const windowedNodesData = useWindowedNodes({
+    positioningState,
+    viewportChangeTrigger,
     svgRef,
-    zoomIsInitialized,
-    onZoomInitialized: () => setZoomIsInitialized(true),
   });
 
-  const visiblePositionedNodes =
-    positioningState.state === "ready"
+  // Subscribe to viewport changes to trigger windowing recalculation
+  useEffect(() => {
+    const unsubscribe = subscribeToViewportChanges(() => {
+      setViewportChangeTrigger((prev) => prev + 1);
+    });
+    return unsubscribe;
+  }, [subscribeToViewportChanges]);
+
+  const visiblePositionedNodes = useMemo(() => {
+    return positioningState.state === "ready"
       ? positioningState.positionedNodes
       : positioningState.state === "in-progress"
         ? (positioningState.transitionNodes ?? null)
         : null;
+  }, [positioningState]);
 
   const propagateEvent = useCallback<PropagateEvent>((event) => {
     svgRef.current?.dispatchEvent(event);
@@ -125,8 +143,9 @@ const ViewsRendererContent = function ({
             }}
           >
             <FlowchartLinks
-              links={links}
               positionedNodes={visiblePositionedNodes}
+              reappearingLinkIds={windowedNodesData.reappearingLinkIds}
+              windowedLinks={windowedNodesData.windowedLinks}
             />
           </motion.g>
         )}
@@ -192,15 +211,18 @@ const ViewsRendererContent = function ({
                 </div>
               );
             })}
-          {visiblePositionedNodes &&
-            zoomIsInitialized &&
-            Array.from(visiblePositionedNodes.entries()).map(
+          {zoomIsInitialized &&
+            windowedNodesData.windowedNodes &&
+            Array.from(windowedNodesData.windowedNodes.entries()).map(
               ([nodeId, node]) => {
+                const isReappearing =
+                  windowedNodesData.reappearingNodeIds.has(nodeId);
                 return (
                   <ViewNode
                     key={nodeId}
                     node={node}
                     propagateEvent={propagateEvent}
+                    isReappearing={isReappearing}
                   />
                 );
               },

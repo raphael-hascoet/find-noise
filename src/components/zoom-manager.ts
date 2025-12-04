@@ -1,13 +1,20 @@
 import * as d3 from "d3";
 import { atom, useAtomValue, useSetAtom } from "jotai";
 import { useMotionValue, useTransform } from "motion/react";
-import { useCallback, useEffect, useMemo, useRef, type RefObject } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { ulid } from "ulid";
 import {
   zoomConstantsAtom,
   type ZoomConstants,
 } from "../constants/positioning-constants-atoms";
-import { debounce } from "../utils/debounce";
+import { debounce, throttle } from "../utils/debounce";
 import {
   nodePositioningStateAtom,
   type PositionedNode,
@@ -54,14 +61,14 @@ export const useZoomManager = ({
   svgRef,
   zoomIsInitialized,
   onZoomInitialized,
+  d3ZoomRef,
 }: {
   svgRef: RefObject<SVGSVGElement | null>;
   zoomIsInitialized: boolean;
   onZoomInitialized: () => void;
+  d3ZoomRef: RefObject<d3.ZoomBehavior<SVGSVGElement, unknown> | null>;
 }) => {
   const zoomConstants = useAtomValue(zoomConstantsAtom);
-
-  const d3ZoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown>>(null);
 
   const zoomStatus = useAtomValue(zoomStatusAtom);
   const setZoomStatusToIdle = useSetAtom(updateZoomStatusToIdle);
@@ -75,6 +82,34 @@ export const useZoomManager = ({
 
   const overlayTransform = useTransform(
     () => `translate(${tx.get()}px, ${ty.get()}px) scale(${tk.get()})`,
+  );
+
+  const [viewportChangeCallbacks, setViewportChangeCallbacks] = useState<
+    Set<() => void>
+  >(new Set());
+
+  const subscribeToViewportChanges = useCallback((callback: () => void) => {
+    setViewportChangeCallbacks((prev: Set<() => void>) => {
+      const newSet = new Set(prev);
+      newSet.add(callback);
+      return newSet;
+    });
+
+    return () => {
+      setViewportChangeCallbacks((prev: Set<() => void>) => {
+        const newSet = new Set(prev);
+        newSet.delete(callback);
+        return newSet;
+      });
+    };
+  }, []);
+
+  const notifyViewportChange = useMemo(
+    () =>
+      throttle(() => {
+        viewportChangeCallbacks.forEach((callback: () => void) => callback());
+      }, 200),
+    [viewportChangeCallbacks],
   );
 
   const minScaleExtentRef = useRef<number>(zoomConstants.minZoom);
@@ -125,11 +160,12 @@ export const useZoomManager = ({
         tx.set(et.x);
         ty.set(et.y);
         tk.set(et.k);
+        notifyViewportChange();
       });
 
     d3ZoomRef.current = zoom;
     zoomRoot.call(zoom);
-  }, []);
+  }, [notifyViewportChange]);
 
   useEffect(() => {
     if (
@@ -391,10 +427,15 @@ export const useZoomManager = ({
       .call(d3ZoomRef.current.scaleBy, newScale);
   };
 
-  return { overlayTransform, onZoom };
+  return {
+    overlayTransform,
+    onZoom,
+    currentScale: tk,
+    subscribeToViewportChanges,
+  };
 };
 
-const getPositionedNodesBounds = (
+export const getPositionedNodesBounds = (
   positionedNodes: Map<string, PositionedNode>,
 ) => {
   return Array.from(positionedNodes.values()).reduce(

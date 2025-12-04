@@ -22,6 +22,7 @@ import {
 type AlbumCardProps = {
   context: AlbumContext;
   hasChildren?: boolean;
+  isReappearing?: boolean;
 } & NodeContentWrapperPropsBase;
 
 export type AlbumCardVariant = "compact" | "detailed";
@@ -48,6 +49,7 @@ type AlbumCardContentOptions = {
 
 export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
   context,
+  isReappearing,
   ...graphNodeProps
 }: AlbumCardProps) {
   const { addRecommendationsToNode, focusNode } = useFlowchartViewActions();
@@ -117,7 +119,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                     fontSize: "var(--text-sm)",
                   },
                   detailed: {
-                    fontSize: "var(--text-md)",
+                    fontSize: "var(--text-base)",
                   },
                 }}
               >
@@ -149,7 +151,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
               {variant === "detailed" && (
                 <motion.div
                   className={`flex flex-row items-center gap-1`}
-                  initial={{ opacity: 0 }}
+                  initial={isReappearing ? false : { opacity: 0 }}
                   animate={{
                     opacity: 1,
                     transition: { delay: 0.3, duration: 0.3 },
@@ -157,7 +159,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
                   exit={{ opacity: 0, transition: { duration: 0.1 } }}
                 >
                   <motion.p
-                    className={`text-md pointer-events-auto max-w-full text-center font-sans break-words text-gray-400 hover:cursor-pointer hover:underline`}
+                    className={`pointer-events-auto max-w-full text-center font-sans text-base break-words text-gray-400 hover:cursor-pointer hover:underline`}
                     onClick={(e) => {
                       e.stopPropagation();
                       setActiveView({
@@ -173,15 +175,15 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
 
                   <motion.span
                     className="text-gray-500"
-                    initial={{ opacity: 0 }}
+                    initial={isReappearing ? false : { opacity: 0 }}
                     animate={{ opacity: 1 }}
                   >
                     -
                   </motion.span>
 
                   <motion.p
-                    className={`text-md text-center font-sans text-gray-400`}
-                    initial={{ opacity: 0 }}
+                    className={`text-center font-sans text-base text-gray-400`}
+                    initial={isReappearing ? false : { opacity: 0 }}
                     animate={{ opacity: 1 }}
                     style={{ overflow: "hidden" }}
                   >
@@ -197,7 +199,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
             {variant === "detailed" && (
               <motion.div
                 className="flex flex-col items-center gap-2"
-                initial="hidden"
+                initial={isReappearing ? false : "hidden"}
                 animate="show"
                 exit="hide"
                 variants={{
@@ -216,7 +218,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
 
           {showZoomInButton && (
             <motion.button
-              initial={{ opacity: 0 }}
+              initial={isReappearing ? false : { opacity: 0 }}
               animate={{
                 opacity: 1,
                 transition: { delay: 0.5, duration: 0.3 },
@@ -241,7 +243,7 @@ export const AlbumCardNodeContent = memo(function AlbumCardNodeContent({
           )}
           {showAddRecommendationsButton && (
             <motion.button
-              initial={{ opacity: 0 }}
+              initial={isReappearing ? false : { opacity: 0 }}
               animate={{
                 opacity: 1,
                 transition: { delay: 0.5, duration: 0.3 },
