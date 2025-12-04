@@ -30,6 +30,12 @@ _Note: [RateYourMusic](https://rateyourmusic.com/) data is from **2022** and can
 
 All data and images are copyrighted by their respective owners and used for educational and informational purposes only. If you believe that any content on this site infringes your copyright, please contact the address below.
 
+## Planned features (not yet implemented)
+
+- Starter album recommendations, displaying a variety of initial suggestions spanning different genres with brief descriptions
+- Previous/next page navigation, allowing users to go back to a view they were previously on
+- External links on album and artist nodes to relevant pages
+
 ## Development
 
 You can clone and run the app yourself with [pnpm](https://pnpm.io/) through those commands:
