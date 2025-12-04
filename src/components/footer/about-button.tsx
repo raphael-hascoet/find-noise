@@ -162,7 +162,7 @@ const AboutModalButton = forwardRef<HTMLDivElement, AboutModalButtonProps>(
                 }}
                 className="mt-2 flex flex-col items-start gap-4"
               >
-                <div className="flex max-h-[70dvh] flex-col gap-2 overflow-y-auto">
+                <div className="flex max-h-[70dvh] flex-col gap-3 overflow-y-auto">
                   <p className="text-sm text-gray-300">
                     This project was built to help music listeners in their
                     journey to discover new albums, artists and genres. Whether
@@ -171,7 +171,7 @@ const AboutModalButton = forwardRef<HTMLDivElement, AboutModalButtonProps>(
                     have a listen !
                   </p>
                   <hr className="w-1/6 border-gray-300/50" />
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-2">
                     <p className="text-sm font-bold">Data sources:</p>
                     <ul className="flex list-inside list-disc flex-col gap-1 text-sm text-gray-300">
                       <li>
@@ -215,8 +215,8 @@ const AboutModalButton = forwardRef<HTMLDivElement, AboutModalButtonProps>(
                       <span className="font-bold">
                         Note that the RateYourMusic data dates from 2022 and
                         cannot currently be updated.
-                      </span>
-                      . The{" "}
+                      </span>{" "}
+                      The{" "}
                       <a
                         className="text-violet-400 underline transition-colors hover:text-violet-400/85 active:text-violet-400/70"
                         href="https://sonemic.com/"
