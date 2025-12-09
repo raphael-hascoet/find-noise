@@ -14,7 +14,7 @@ export const zoomConstantsAtom = atom<ZoomConstants>((get) => {
   return !isMobile
     ? {
         zoomPaddingX: 100,
-        zoomPaddingY: 150,
+        zoomPaddingY: 60,
         minZoom: 0.4,
         maxZoom: 2,
       }
